@@ -1,0 +1,33 @@
+requirements:
+  - id: IR-001
+    question: Which threat actors are currently targeting technology organizations?
+    priority: P2
+    stakeholders: [CISO, SOC, Threat Intel]
+  - id: IR-002
+    question: Which ransomware campaigns are associated with newly observed infrastructure?
+    priority: P1
+    stakeholders: [CISO, Incident Response]
+  - id: IR-003
+    question: Which exposed credentials or leaked assets could represent organizational risk?
+    priority: P1
+    stakeholders: [IAM, SOC, CISO]
+  - id: IR-004
+    question: Which malware families are associated with observed IOCs?
+    priority: P2
+    stakeholders: [SOC, Detection Engineering]
+  - id: IR-005
+    question: Which threat actors use the observed infrastructure?
+    priority: P2
+    stakeholders: [Threat Intel]
+  - id: IR-006
+    question: Which MITRE ATT&CK techniques characterize the observed campaign?
+    priority: P3
+    stakeholders: [Detection Engineering, Red Team]
+  - id: IR-007
+    question: Which observed infrastructure overlaps with previously known campaigns?
+    priority: P2
+    stakeholders: [Threat Intel, SOC]
+  - id: IR-008
+    question: Which intelligence requires immediate analyst review?
+    priority: P1
+    stakeholders: [Threat Intel]
