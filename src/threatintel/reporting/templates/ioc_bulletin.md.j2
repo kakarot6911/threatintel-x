@@ -1,0 +1,15 @@
+{% from "_macros.md.j2" import header, footer %}
+{{ header(title, tlp, synthetic, generated, producer, requirements, attack_version) }}
+
+Actionable indicators with confidence score >= {{ min_score }}. Apply an expiry: IPs and URLs
+churn quickly; hashes age slowly.
+
+| Type | Value | Confidence | First seen | Last seen | Lifecycle |
+|---|---|---|---|---|---|
+{% for r in rows %}
+| {{ r.type }} | `{{ r.value }}` | {{ r.confidence }} ({{ r.score }}) | {{ r.first_seen }} | {{ r.last_seen }} | {{ r.status }}{% if r.synthetic %} (SYNTHETIC){% endif %} |
+{% else %}
+| - | none | - | - | - | - |
+{% endfor %}
+
+{{ footer() }}

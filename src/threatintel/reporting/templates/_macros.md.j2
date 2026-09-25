@@ -1,0 +1,24 @@
+{% macro header(title, tlp, synthetic, generated, producer, requirements, attack_version) -%}
+# {{ title }}
+
+**TLP:{{ tlp }}** | Generated {{ generated }} by {{ producer }} | ATT&CK: {{ attack_version }}
+{% if requirements %}
+Answers intelligence requirements: {{ requirements | join(", ") }}
+{% endif %}
+{% if synthetic %}
+
+> **SYNTHETIC DATA NOTICE** - this product is built (wholly or partly) from the fictional
+> THREATINTEL-X demonstration dataset. Actors, campaigns, infrastructure and victims are
+> invented. Do not action any indicator in it.
+{% endif %}
+{%- endmacro %}
+
+{% macro footer() -%}
+---
+**Analytic standards.** Source reliability and information credibility use the Admiralty
+scale (A-F / 1-6) and are scored separately. Confidence scores are deterministic and
+explained factor-by-factor (reliability, credibility, corroboration by *independent*
+origins, recency, specificity, technical evidence). Attribution statements use estimative
+language and require evidence across multiple independent categories; infrastructure
+overlap alone never exceeds LOW. No LLM determined any judgement in this product.
+{%- endmacro %}

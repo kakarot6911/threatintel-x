@@ -1,0 +1,99 @@
+{% from "_macros.md.j2" import header, footer %}
+{{ header(title, tlp, synthetic, generated, producer, requirements, attack_version) }}
+
+## Executive summary
+{{ campaign.name }} is {{ "an" if campaign.campaign_status[:1] in "aeiou" else "a" }} {{ campaign.campaign_status }} campaign targeting {{ campaign.target_sectors | join(", ") or "unknown sectors" }} in {{ campaign.target_regions | join(", ") or "unknown regions" }}.
+{% if attribution %}
+{{ attribution.statement }}
+{% else %}
+No attribution assessment has been made.
+{% endif %}
+{{ iocs | length }} indicator(s), {{ techniques | length }} ATT&CK technique(s) and {{ malware | length }} malware famil{{ "y" if malware | length == 1 else "ies" }} are associated with this campaign.
+
+## Observed activity
+{{ campaign.objective or "Objective not established." }}
+{% if vulnerabilities %}
+Exploited vulnerabilities: {% for v in vulnerabilities %}{{ v.name }}{% if v.affected_product %} ({{ v.affected_product }}){% endif %}{% if v.known_exploited %} - known exploited{% endif %}{{ ", " if not loop.last }}{% endfor %}.
+{% endif %}
+
+## Indicators of compromise
+| Type | Value | Confidence | First seen | Last seen | Independent origins |
+|---|---|---|---|---|---|
+{% for r in iocs %}
+| {{ r.type }} | `{{ r.value }}` | {{ r.confidence }}{% if r.score is not none %} ({{ r.score }}){% endif %} | {{ r.first_seen }} | {{ r.last_seen }} | {{ r.sources }} |
+{% else %}
+| - | none linked | - | - | - | - |
+{% endfor %}
+
+## Infrastructure
+{% for r in infrastructure %}
+- `{{ r.value }}` ({{ r.type }}, {{ r.confidence }})
+{% else %}
+- No infrastructure linked.
+{% endfor %}
+
+## Malware and tooling
+{% for m in malware %}
+- **{{ m.name }}** - {{ m.malware_types | join(", ") }} ({{ m.platforms | join(", ") }})
+{% endfor %}
+{% for t in tools %}
+- **{{ t.name }}** (tool{% if t.commodity %}, commodity - weak attribution value{% endif %})
+{% endfor %}
+{% if not malware and not tools %}
+- None linked.
+{% endif %}
+
+## TTPs (MITRE ATT&CK)
+| Technique | Name | Tactic(s) |
+|---|---|---|
+{% for t in techniques %}
+| [{{ t.id }}]({{ t.url }}) | {{ t.name }} | {{ t.tactics }} |
+{% endfor %}
+
+## Evidence
+{% if attribution %}
+{% for e in attribution.evidence %}
+- [{{ e.type }}] {{ e.description }} (weight {{ e.weight }}, confidence {{ "%.2f" | format(e.confidence) }})
+{% endfor %}
+{% endif %}
+{% for r in reported %}
+- Source claim: {{ r.source }} ({{ r.reliability }}) attributes the campaign to {{ r.actor }} ({{ r.confidence }}/100).
+{% endfor %}
+
+## Confidence
+{% if attribution %}
+Attribution: **{{ attribution.level }}** (score {{ "%.2f" | format(attribution.score) }}).
+{% for c in attribution.caveats %}
+- {{ c }}
+{% endfor %}
+{% if attribution.alternatives | length > 1 %}
+Alternative hypotheses considered:
+{% for a in attribution.alternatives %}
+- {{ a.actor }}: {{ a.level }} ({{ "%.2f" | format(a.score) }}; categories: {{ a.categories | join(", ") }})
+{% endfor %}
+{% endif %}
+{% endif %}
+
+## Detection opportunities
+{% for t in techniques %}
+- **{{ t.id }} {{ t.name }}** - {{ t.detection }}
+{% endfor %}
+{% for kind, hint in ioc_hints %}
+- **{{ kind }} IOCs** - {{ hint }}
+{% endfor %}
+
+## Recommended actions
+1. Load HIGH/MEDIUM-confidence indicators into blocking controls with an expiry; hunt retroactively for LOW ones.
+{% if vulnerabilities %}
+2. Verify patch status for {{ vulnerabilities | map(attribute="name") | join(", ") }}.
+{% endif %}
+3. Implement the detection opportunities above and review this report when new reporting arrives.
+
+## Sources
+| Source | Reliability | Credibility | Derived from |
+|---|---|---|---|
+{% for s in sources %}
+| {{ s.name }} | {{ s.reliability }} | {{ s.credibility }} | {{ s.independent_of }} |
+{% endfor %}
+
+{{ footer() }}

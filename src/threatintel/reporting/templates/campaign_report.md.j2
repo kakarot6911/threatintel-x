@@ -1,0 +1,55 @@
+{% from "_macros.md.j2" import header, footer %}
+{{ header(title, tlp, synthetic, generated, producer, requirements, attack_version) }}
+
+## Overview
+- **Status:** {{ campaign.campaign_status }}
+- **Targets:** {{ campaign.target_sectors | join(", ") or "unknown" }} / {{ campaign.target_regions | join(", ") or "unknown" }}
+- **Objective:** {{ campaign.objective or "not established" }}
+- **Assessment:** {{ attribution.statement if attribution else "not assessed" }}
+
+## Timeline
+{% for when, what in timeline %}
+- {{ when }} - {{ what }}
+{% endfor %}
+
+## Actor
+{% for r in reported %}
+- Reported by {{ r.source }} ({{ r.reliability }}): {{ r.actor }} ({{ r.confidence }}/100)
+{% else %}
+- No source has attributed this campaign.
+{% endfor %}
+{% if attribution %}
+- Our assessment: **{{ attribution.level }}** - {{ attribution.statement }}
+{% endif %}
+
+## Infrastructure ({{ infrastructure | length }})
+{% for r in infrastructure %}
+- `{{ r.value }}` ({{ r.type }}; {{ r.confidence }}; last seen {{ r.last_seen }})
+{% endfor %}
+
+## Malware / tools / CVEs
+{% for m in malware %}- {{ m.name }} ({{ m.malware_types | join(", ") }})
+{% endfor %}
+{% for t in tools %}- {{ t.name }} (tool{% if t.commodity %}, commodity{% endif %})
+{% endfor %}
+{% for v in vulnerabilities %}- {{ v.name }}{% if v.known_exploited %} (known exploited){% endif %}
+{% endfor %}
+
+## TTPs
+{% for t in techniques %}
+- {{ t.id }} {{ t.name }} ({{ t.tactics }})
+{% endfor %}
+
+## Related campaigns
+{% for r in related %}
+- {{ r.campaign }} - overlap {{ "%.2f" | format(r.score) }}: {{ r.why }}
+{% else %}
+- No significant overlap with other tracked campaigns.
+{% endfor %}
+
+## Sources
+{% for s in sources %}
+- {{ s.name }} ({{ s.reliability }}{{ s.credibility }})
+{% endfor %}
+
+{{ footer() }}

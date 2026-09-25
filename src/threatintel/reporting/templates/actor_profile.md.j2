@@ -1,0 +1,57 @@
+{% from "_macros.md.j2" import header, footer %}
+{{ header(title, tlp, synthetic, generated, producer, requirements, attack_version) }}
+
+## Summary
+**{{ actor.name }}** ({{ "group / intrusion set" if actor.actor_kind == "intrusion-set" else "individual persona" }})
+{% if actor.aliases %}- Aliases: {{ actor.aliases | join(", ") }}
+{% endif %}
+- Motivation (assessed): {{ actor.motivation }}
+- Sophistication (assessed): {{ actor.sophistication }}
+- Targets: {{ actor.target_sectors | join(", ") or "unknown" }} in {{ actor.target_regions | join(", ") or "unknown" }}
+- First / last seen: {{ actor.first_seen.date().isoformat() if actor.first_seen else "?" }} / {{ actor.last_seen.date().isoformat() if actor.last_seen else "?" }}
+
+{{ actor.description }}
+
+## Campaigns (source-reported)
+| Campaign | Status | Start | Our assessment | Assessed actor |
+|---|---|---|---|---|
+{% for c in campaigns %}
+| {{ c.name }} | {{ c.status }} | {{ c.start }} | {{ c.assessment }} | {{ c.assessed_actor }} |
+{% else %}
+| none | | | | |
+{% endfor %}
+
+> Campaigns are listed because a source reported them for this actor. Where our own assessment
+> disagrees or is weaker, the table shows it - source claims are not silently adopted.
+
+## Capabilities
+- Malware / tools: {{ malware | join(", ") or "none linked" }}
+{% if commodity %}- Commodity tooling (weak attribution value): {{ commodity | join(", ") }}
+{% endif %}
+
+## TTPs (ATT&CK)
+{% for t in techniques %}
+- {{ t.id }} {{ t.name }}
+{% endfor %}
+
+## Associated infrastructure ({{ infrastructure_total }})
+{% for i in infrastructure %}
+- `{{ i }}`
+{% endfor %}
+{% if infrastructure_total > infrastructure | length %}- ... {{ infrastructure_total - infrastructure | length }} more
+{% endif %}
+
+## HUMINT-style reporting
+{% for h in humint %}
+- Source {{ h.source_identifier }} ({{ h.source_reliability }}{{ h.information_credibility }}, {{ h.collection_method }}): RAW REPORT - "{{ h.raw_note }}"
+  - Analyst assessment: {{ h.analyst_assessment or "none recorded" }}
+{% else %}
+- None.
+{% endfor %}
+
+## Sources
+{% for s in sources %}
+- {{ s.name }} ({{ s.reliability }}{{ s.credibility }})
+{% endfor %}
+
+{{ footer() }}

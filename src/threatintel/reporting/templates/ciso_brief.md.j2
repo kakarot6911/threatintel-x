@@ -1,0 +1,40 @@
+{% from "_macros.md.j2" import header, footer %}
+{{ header(title, tlp, synthetic, generated, producer, requirements, attack_version) }}
+
+**Organisation:** {{ org }}
+
+## Bottom line
+{% if top %}
+- {{ top | length }} item(s) need attention now (P1/P2); {{ queue_total }} item(s) are in the analyst review queue.
+{% else %}
+- No P1/P2 items; {{ queue_total }} item(s) in the analyst review queue.
+{% endif %}
+- {{ creds.summary }}
+- {{ actors | length }} tracked actor(s) target our sector.
+- {{ ransomware_total }} ransomware leak-site claim(s) tracked; {{ sector_claims | length }} in our sector.
+
+## What needs a decision
+{% for r in top %}
+- **{{ r.priority }} {{ priority_labels[r.priority] }}** - {{ r.title }} (source: {{ r.source }})
+{% else %}
+- Nothing requires executive decision at this time.
+{% endfor %}
+
+## Threat landscape for our sector
+{% for a in actors %}
+- **{{ a.actor }}** - {{ a.motivation }}; targets {{ a.sectors | join(", ") }}; last seen {{ a.last_seen[:10] if a.last_seen else "?" }}
+{% endfor %}
+
+## Credential exposure
+{% for r in creds.rows[:10] %}
+- `{{ r.account }}` exposed (source {{ r.source_id }}, confidence {{ r.confidence }}/100). Password was redacted at collection and never stored.
+{% else %}
+- No organisational accounts exposed.
+{% endfor %}
+
+## Recommended decisions
+1. Approve containment actions for P1 items and fund patching of known-exploited edge-device CVEs.
+2. Force credential resets + session revocation for exposed accounts; enforce phishing-resistant MFA.
+3. Review ransomware readiness (offline backups, recovery-inhibition detections) given sector activity.
+
+{{ footer() }}
