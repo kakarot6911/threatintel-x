@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Lint, types & security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: pip install -e ".[dev]"
+      - run: ruff check src tests scripts
+      - run: ruff format --check src tests scripts
+      - run: mypy
+      - run: bandit -q -r src
+      - run: pip-audit --progress-spinner off --skip-editable
+
+  test:
+    name: Tests (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "${{ matrix.python }}", cache: pip}
+      - run: pip install -e ".[dev]"
+      - run: pytest --cov=threatintel --cov-report=term --cov-fail-under=90
+
+  postgres:
+    name: Pipeline on PostgreSQL
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: {POSTGRES_USER: tix, POSTGRES_PASSWORD: tix, POSTGRES_DB: threatintel}
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U tix" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TIX_TEST_POSTGRES_URL: postgresql+psycopg://tix:tix@localhost:5432/threatintel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: pip install -e ".[dev,postgres]"
+      - run: pytest tests/integration/test_postgres.py -v
+
+  docker:
+    name: Docker build & smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t threatintel-x:ci .
+      - name: Run container and exercise it
+        run: |
+          docker run -d --name tix -p 8000:8000 -e TIX_API_KEY=ci-key --read-only --tmpfs /tmp \
+            -v tixdata:/var/lib/threatintel threatintel-x:ci
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:8000/health && break; sleep 1; done
+          docker exec -e TIX_LOG_LEVEL=WARNING tix threatintel demo > /dev/null
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/api/v1/stats)" = "401"
+          curl -fsS -H 'X-API-Key: ci-key' http://127.0.0.1:8000/api/v1/stats
+          curl -fsS -u analyst:ci-key http://127.0.0.1:8000/taxii2/api1/collections/ > /dev/null
+          test "$(docker exec tix id -u)" != "0"
+          docker logs tix | tail -5

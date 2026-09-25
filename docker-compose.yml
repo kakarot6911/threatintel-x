@@ -1,0 +1,35 @@
+# THREATINTEL-X. MISP and OpenCTI are INTEGRATIONS, not part of this stack: point
+# TIX_MISP_URL / TIX_OPENCTI_URL at your own instances (see docs/INTEGRATIONS.md).
+services:
+  threatintel:
+    build: .
+    image: threatintel-x:local
+    ports: ["127.0.0.1:8000:8000"]
+    env_file: [.env]
+    environment:
+      TIX_DATABASE_URL: ${TIX_DATABASE_URL:-sqlite:////var/lib/threatintel/threatintel.db}
+    volumes: ["tix-data:/var/lib/threatintel"]
+    read_only: true
+    tmpfs: ["/tmp"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    restart: unless-stopped
+
+  # Optional: `docker compose --profile postgres up` and set
+  # TIX_DATABASE_URL=postgresql+psycopg://tix:tix@postgres:5432/threatintel in .env
+  postgres:
+    profiles: ["postgres"]
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: tix
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tix}
+      POSTGRES_DB: threatintel
+    volumes: ["tix-pg:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tix -d threatintel"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  tix-data:
+  tix-pg:
