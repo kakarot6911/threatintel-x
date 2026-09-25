@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% from "_macros.html" import syn %}
+{% block title %}Sources{% endblock %}
+{% block content %}
+<h1>Sources</h1>
+<p class="muted">Reliability is a property of the source's track record (Admiralty A–F). Credibility is judged per item (1–6). Sources marked "derived from" are not independent of their origin and do not count as corroboration.</p>
+<table><thead><tr><th>Source</th><th>Type</th><th>Reliability</th><th>Derived from</th><th>Collection policy</th></tr></thead><tbody>
+{% for s in sources %}<tr><td>{{ s.name }} {{ syn(s.synthetic) }}{% if s.internal %} <span class="badge">internal</span>{% endif %}</td><td>{{ s.source_type.value }}</td><td>{{ s.reliability.value }} — {{ reliability_labels[s.reliability.value] }}</td><td>{{ s.derived_from or '—' }}</td><td class="muted">{{ s.collection_policy or s.description }}</td></tr>{% else %}<tr><td colspan="5">No sources.</td></tr>{% endfor %}
+</tbody></table>
+{% endblock %}

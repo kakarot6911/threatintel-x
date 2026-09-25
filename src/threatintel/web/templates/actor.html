@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% from "_macros.html" import level, syn %}
+{% block title %}{{ a.name }}{% endblock %}
+{% block content %}
+<p class="crumbs"><a href="/actors">Actors</a> /</p>
+<h1>{{ a.name }} {{ syn(a.synthetic) }}</h1>
+<p>{{ a.description }}</p>
+<p class="muted">Aliases: {{ a.aliases|join(', ') or '—' }} · Motivation (assessed): {{ a.motivation }} · Sophistication: {{ a.sophistication }} · First/last seen: {{ a.first_seen.date() if a.first_seen else '?' }} / {{ a.last_seen.date() if a.last_seen else '?' }}</p>
+<p><a class="button" href="/reports/view?kind=actor-profile&amp;subject={{ a.id|urlencode }}">Threat actor profile</a></p>
+<div class="grid2">
+<section class="card"><h2>Relationship graph</h2><div class="graphbox">{{ svg|safe }}</div>
+<p class="legend"><span class="node-actor">actor</span><span class="node-campaign">campaign</span><span class="node-malware">malware/tool</span><span class="node-ioc">observable</span><span class="node-ttp">ATT&amp;CK</span><span class="node-vuln">CVE</span> · dashed = reported / weak</p></section>
+<section class="card"><h2>Campaigns (source-reported)</h2>
+<table class="compact"><thead><tr><th>Campaign</th><th>Our assessment</th></tr></thead><tbody>
+{% for c, asm in campaigns %}<tr><td><a href="/campaigns/{{ c.id }}">{{ c.name }}</a></td><td>{% if asm %}{{ level(asm.level) }} {{ asm.alternatives[0].actor if asm.alternatives else '' }}{% else %}—{% endif %}</td></tr>{% endfor %}
+</tbody></table>
+<h2>Targets</h2><p>{{ a.target_sectors|join(', ') }} · {{ a.target_regions|join(', ') }}</p>
+<h2>Malware &amp; tools</h2><p>{{ prof.malware|sort|join(', ') or '—' }}{% if prof.commodity_malware %} <span class="muted">(commodity: {{ prof.commodity_malware|sort|join(', ') }})</span>{% endif %}</p>
+<h2>TTPs</h2><ul class="tags">{% for t in techniques %}<li><a href="{{ t.url }}" target="_blank" rel="noopener noreferrer">{{ t.technique_id }} {{ t.name }}</a></li>{% endfor %}</ul>
+<h2>Infrastructure ({{ prof.infrastructure|length }})</h2><ul class="tags">{% for i in prof.infrastructure|sort %}<li><a href="/investigate?q={{ i|urlencode }}"><code>{{ i }}</code></a></li>{% endfor %}</ul>
+</section></div>
+{% endblock %}

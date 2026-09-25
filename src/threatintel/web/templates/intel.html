@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% from "_macros.html" import prio, level, syn %}
+{% block title %}Intelligence{% endblock %}
+{% block content %}
+<h1>Collected intelligence</h1>
+<table><thead><tr><th>Priority</th><th>Title</th><th>Source (reliability)</th><th>Confidence</th><th>Attribution</th><th>Status</th></tr></thead><tbody>
+{% for r in rows %}<tr>
+<td>{{ prio(r.priority) }}</td><td><a href="/intel/{{ r.item.id }}">{{ r.item.title }}</a> {{ syn(r.item.synthetic) }}</td>
+<td>{{ r.item.source_name }} ({{ r.item.source_reliability.value }}{{ r.item.information_credibility.value }})</td>
+<td>{% if r.confidence %}{{ level(r.confidence.level) }}{% endif %}</td>
+<td>{% if r.attribution %}{{ level(r.attribution.level) }}{% if r.attribution.level not in ("INSUFFICIENT EVIDENCE",) and r.attribution.alternatives %} {{ r.attribution.alternatives[0].actor }}{% endif %}{% endif %}</td>
+<td><span class="status">{{ r.status }}</span></td></tr>
+{% else %}<tr><td colspan="6">No items. <a href="/collect">Collect some.</a></td></tr>{% endfor %}
+</tbody></table>
+{% endblock %}

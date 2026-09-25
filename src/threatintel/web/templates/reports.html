@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<h1>Intelligence products</h1>
+<div class="grid2">
+<section class="card"><h2>Organisation-wide</h2><ul>
+<li><a href="/reports/view?kind=ciso-brief">CISO threat brief</a></li>
+<li><a href="/reports/view?kind=ioc-bulletin">IOC bulletin</a> · <a href="/api/v1/reports/ioc-bulletin?format=csv">CSV</a></li>
+<li><a href="/api/v1/stix/bundle">STIX 2.1 bundle (JSON)</a> · <a href="/api/v1/stix/bundle?include_synthetic=false">real-world only</a></li></ul></section>
+<section class="card"><h2>Per campaign</h2><ul>{% for c in campaigns %}<li>{{ c.name }}: <a href="/reports/view?kind=technical-report&amp;subject={{ c.id|urlencode }}">technical</a> · <a href="/reports/view?kind=campaign-report&amp;subject={{ c.id|urlencode }}">campaign</a></li>{% endfor %}</ul>
+<h2>Per actor</h2><ul>{% for a in actors %}<li><a href="/reports/view?kind=actor-profile&amp;subject={{ a.id|urlencode }}">{{ a.name }} profile</a></li>{% endfor %}</ul></section>
+</div>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% from "_macros.html" import level, syn %}
+{% block title %}Campaigns{% endblock %}
+{% block content %}
+<h1>Campaigns</h1>
+<table><thead><tr><th>Name</th><th>Status</th><th>Targets</th><th>Start</th><th>Attribution (ours)</th><th>Statement</th></tr></thead><tbody>
+{% for r in rows %}<tr><td><a href="/campaigns/{{ r.c.id }}">{{ r.c.name }}</a> {{ syn(r.c.synthetic) }}</td><td>{{ r.c.campaign_status }}</td><td>{{ r.c.target_sectors|join(', ') }}</td><td>{{ r.c.start_date.date() if r.c.start_date else '' }}</td>
+<td>{% if r.a %}{{ level(r.a.level) }}{% endif %}</td><td class="muted">{{ r.a.statement if r.a else 'not assessed' }}</td></tr>
+{% else %}<tr><td colspan="6">No campaigns.</td></tr>{% endfor %}</tbody></table>
+{% endblock %}

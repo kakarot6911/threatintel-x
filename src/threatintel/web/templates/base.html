@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}THREATINTEL-X{% endblock %} · THREATINTEL-X</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <a class="brand" href="/"><span class="logo" aria-hidden="true">◆</span> THREATINTEL-X</a>
+  <nav aria-label="Primary">
+    {% set nav = [("dashboard","/","Dashboard"),("intel","/intel","Intelligence"),("actors","/actors","Actors"),
+                  ("campaigns","/campaigns","Campaigns"),("iocs","/iocs","IOCs"),("investigate","/investigate","Investigate"),
+                  ("attack","/attack","ATT&CK"),("reports","/reports","Reports"),("requirements","/requirements","IRs"),
+                  ("sources","/sources","Sources"),("integrations","/integrations","Integrations"),("collect","/collect","Collect")] %}
+    {% for key, href, label in nav %}
+    <a href="{{ href }}"{% if active.startswith(key) or (key=="actors" and active=="actor") or (key=="campaigns" and active=="campaign") or (key=="intel" and active=="intel_item") or (key=="reports" and active=="report_view") %} aria-current="page"{% endif %}>{{ label }}</a>
+    {% endfor %}
+  </nav>
+</header>
+<main id="main">
+{% if instance_synthetic %}<p class="notice">This instance contains the <strong>SYNTHETIC</strong> demonstration dataset: fictional actors, campaigns and indicators in reserved documentation address space. Every synthetic object is labelled.</p>{% endif %}
+{% block content %}{% endblock %}
+</main>
+<footer class="foot">THREATINTEL-X {{ version }} · deterministic analysis · no LLM judgements · synthetic data is always labelled</footer>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Collect{% endblock %}
+{% block content %}
+<h1>Collection</h1>
+<div class="grid2">
+<section class="card"><h2>Synthetic demonstration world</h2>
+<p>Seeds 5 fictional actors, 10 campaigns and ~25 raw items (vendor reports, SOC alerts, underground posts, pastes, Telegram, HUMINT) living only in RFC 5737 / RFC 2606 documentation space, then runs the full pipeline. Idempotent.</p>
+<form method="post" action="/collect/demo"><button type="submit">Run synthetic demo</button></form></section>
+<section class="card"><h2>Analyst intake</h2>
+<form method="post" action="/collect/text" class="stack">
+<label>Title <input name="title" required maxlength="300"></label>
+<label>Content (defanged IOCs welcome; secrets are redacted before storage) <textarea name="content" rows="8" required maxlength="200000"></textarea></label>
+<label>Source reliability <select name="reliability">{% for k, v in reliability_labels.items() %}<option value="{{ k }}"{% if k=='F' %} selected{% endif %}>{{ k }} — {{ v }}</option>{% endfor %}</select></label>
+<label>Information credibility <select name="credibility">{% for k, v in credibility_labels.items() %}<option value="{{ k }}"{% if k=='6' %} selected{% endif %}>{{ k }} — {{ v }}</option>{% endfor %}</select></label>
+<button type="submit">Process</button></form></section>
+</div>
+{% if result %}<section class="card"><h2>Result</h2>
+{% if result.ingest %}<p><a href="/intel/{{ result.ingest.item_id }}">Open processed item →</a></p>{% endif %}
+<pre>{{ result|tojson(indent=2) }}</pre></section>{% endif %}
+{% endblock %}

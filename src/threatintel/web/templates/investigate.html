@@ -1,0 +1,25 @@
+{% extends "base.html" %}{% from "_macros.html" import level, syn %}
+{% block title %}Investigate{% endblock %}
+{% block content %}
+<h1>IOC investigation</h1>
+<form method="get" class="inline"><label>IP / domain / URL / hash / email / CVE <input name="q" value="{{ q }}" maxlength="2048" size="60" autofocus></label><button>Investigate</button></form>
+{% if r and not r.found %}<p class="card">Nothing known about <code>{{ q }}</code>. It has not been observed in any collected intelligence.</p>{% endif %}
+{% if r and r.found %}
+<h2><code>{{ r.observable.value }}</code> <small>{{ r.observable.type }}</small> {{ syn(r.observable.synthetic) }}</h2>
+<p class="muted">First seen {{ r.observable.first_seen[:10] }} · last seen {{ r.observable.last_seen[:10] }} · {{ r.observable.sightings }} sighting(s) · lifecycle {{ r.status }}</p>
+<div class="grid2">
+<section class="card"><h2>Why is this IOC relevant?</h2><ul>{% for w in r.why_relevant %}<li>{{ w }}</li>{% endfor %}</ul>
+{% if r.confidence %}<h3>Confidence {{ level(r.confidence.level) }} {{ r.confidence.score }}</h3>
+<table class="compact"><tbody>{% for f in r.confidence.factors %}<tr><td>{{ f.name|replace('_',' ') }}</td><td>{{ '%.1f'|format(f.contribution) }}</td><td class="muted">{{ f.explanation }}</td></tr>{% endfor %}</tbody></table>{% endif %}
+<h3>Pivot paths (IOC → infrastructure → campaign → actor / TTP)</h3>
+<ol class="paths">{% for p in paths %}<li>{% for n in p %}<span class="pill node-{{ {'threat-actor':'actor','campaign':'campaign','malware':'malware','tool':'malware','attack-pattern':'ttp','vulnerability':'vuln'}.get(n.kind,'ioc') }}">{{ n.label }}</span>{% if not loop.last %} → {% endif %}{% endfor %}</li>{% else %}<li class="muted">No path to a tracked actor or technique.</li>{% endfor %}</ol>
+</section>
+<section class="card"><h2>Related infrastructure</h2><table class="compact"><tbody>{% for x in r.related %}<tr><td>{{ x.relationship }}</td><td>{{ x.type }}</td><td><a href="/investigate?q={{ x.value|urlencode }}"><code>{{ x.value }}</code></a></td></tr>{% else %}<tr><td class="muted">none</td></tr>{% endfor %}</tbody></table>
+<h2>Campaigns / malware / actors</h2><ul>{% for kind, ents in r.entities.items() %}{% for e in ents %}<li>{{ kind }}: <b>{{ e.name }}</b> ({{ e.relationship }}, {{ e.confidence }}/100)</li>{% endfor %}{% endfor %}
+{% for a in r.actors %}<li>actor: <b>{{ a.name }}</b> via {{ a.via }} ({{ a.relationship }}, {{ a.confidence }}/100)</li>{% endfor %}</ul>
+<h2>ATT&amp;CK</h2><ul>{% for t in r.techniques %}<li>{{ t }}</li>{% else %}<li class="muted">none</li>{% endfor %}</ul>
+<h2>Enrichment</h2>{% for e in r.enrichment %}<details><summary>{{ e.provider }} · {{ e.timestamp[:10] }}{% if e.synthetic %} · synthetic fixture{% endif %}</summary><pre>{{ e.result|tojson(indent=2) }}</pre></details>{% else %}<p class="muted">No enrichment (offline mode or no provider for this type).</p>{% endfor %}
+<h2>Sources / intelligence history</h2><ul>{% for s in r.sources %}<li>{{ s.collected_at[:10] }} — {{ s.source_name }} ({{ s.reliability }}{{ s.credibility }}, {{ s.source_type }})</li>{% endfor %}</ul>
+</section></div>
+{% endif %}
+{% endblock %}

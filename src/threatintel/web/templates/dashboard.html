@@ -1,0 +1,34 @@
+{% extends "base.html" %}{% from "_macros.html" import prio, level, syn %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<h1>Intelligence dashboard</h1>
+{% if empty %}
+<section class="card"><h2>No intelligence yet</h2><p>Load the synthetic demo world or ingest your own text.</p>
+<form method="post" action="/collect/demo"><button type="submit">Load synthetic demo</button></form></section>
+{% else %}
+<div class="kpis">
+  <div class="kpi"><span>{{ items }}</span>collected items</div>
+  <div class="kpi"><span>{{ total_obs }}</span>observables</div>
+  <div class="kpi"><span>{{ actors|length }}</span>tracked actors</div>
+  <div class="kpi"><span>{{ campaigns|length }}</span>campaigns</div>
+  <div class="kpi"><span>{{ queue|length }}</span>awaiting review</div>
+  <div class="kpi"><span>{{ creds.rows|length }}</span>exposed org accounts</div>
+</div>
+<div class="grid2">
+<section class="card"><h2>Analyst review queue (IR-008)</h2>
+<table><thead><tr><th>Priority</th><th>Item</th><th>Attribution</th></tr></thead><tbody>
+{% for r in queue %}<tr><td>{{ prio(r.priority) }}</td><td><a href="/intel/{{ r.item.id }}">{{ r.item.title }}</a> {{ syn(r.item.synthetic) }}</td>
+<td>{% if r.attribution %}{{ level(r.attribution.level) }}{% endif %}</td></tr>
+{% else %}<tr><td colspan="3">Queue empty.</td></tr>{% endfor %}
+</tbody></table></section>
+<section class="card"><h2>Priority mix</h2>
+<ul class="bars">{% for p in ["P1","P2","P3","P4","P5"] %}
+<li><span class="lab">{{ prio(p) }} {{ priority_labels[p] }}</span><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" aria-hidden="true"><rect class="track" width="100" height="8" rx="2"/><rect class="fill prio-{{ p|lower }}" width="{{ (priorities[p] / (items or 1) * 100)|round(1) }}" height="8" rx="2"/></svg><span class="n">{{ priorities[p] }}</span></li>
+{% endfor %}</ul>
+<h2>Observables by type</h2>
+<ul class="tags">{% for t, n in counts|dictsort %}<li><a href="/iocs?type={{ t }}">{{ t }} <b>{{ n }}</b></a></li>{% endfor %}</ul>
+<p class="muted">ATT&amp;CK knowledge base: {{ attack }}</p>
+</section>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% from "_macros.html" import level, syn %}
+{% block title %}{{ c.name }}{% endblock %}
+{% block content %}
+<p class="crumbs"><a href="/campaigns">Campaigns</a> /</p>
+<h1>{{ c.name }} {{ syn(c.synthetic) }}</h1>
+{% if a %}<p>{{ level(a.level) }} {{ a.statement }}</p>{% endif %}
+<p><a class="button" href="/reports/view?kind=technical-report&amp;subject={{ c.id|urlencode }}">Technical report</a>
+<a class="button" href="/api/v1/reports/campaign-report?subject={{ c.id|urlencode }}">Download campaign report (.md)</a></p>
+<div class="grid2">
+<section class="card"><h2>Graph</h2><div class="graphbox">{{ svg|safe }}</div></section>
+<section class="card"><h2>Campaign report</h2><pre class="report">{{ report }}</pre></section>
+</div>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% from "_macros.html" import syn %}
+{% block title %}Threat actors{% endblock %}
+{% block content %}
+<h1>Threat actors</h1>
+<table><thead><tr><th>Name</th><th>Aliases</th><th>Kind</th><th>Motivation</th><th>Targets</th><th>Campaigns</th><th>Last seen</th></tr></thead><tbody>
+{% for r in rows %}<tr><td><a href="/actors/{{ r.a.id }}">{{ r.a.name }}</a> {{ syn(r.a.synthetic) }}</td><td>{{ r.a.aliases|join(', ') }}</td><td>{{ r.a.actor_kind }}</td><td>{{ r.a.motivation }}</td>
+<td>{{ r.a.target_sectors|join(', ') }}<br><span class="muted">{{ r.a.target_regions|join(', ') }}</span></td><td>{{ r.campaigns }}</td><td>{{ r.a.last_seen.date() if r.a.last_seen else '' }}</td></tr>
+{% else %}<tr><td colspan="7">No actors.</td></tr>{% endfor %}</tbody></table>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Integrations{% endblock %}
+{% block content %}
+<h1>Integrations</h1>
+<p>Network access: <b>{{ "ENABLED" if online else "DISABLED (offline-safe default; set TIX_ONLINE=true)" }}</b></p>
+<div class="grid2">
+<section class="card"><h2>Enrichment providers</h2><table class="compact"><thead><tr><th>Provider</th><th>Supports</th><th>Status</th></tr></thead><tbody>
+{% for p in providers %}<tr><td>{{ p.provider }}</td><td>{{ p.supports|join(', ') }}</td><td>{{ "available" if p.available else p.detail }}</td></tr>{% endfor %}</tbody></table>
+<p class="muted">Online providers refuse private, documentation and special-use observables, and never fabricate results on failure.</p></section>
+<section class="card"><h2>Sharing platforms</h2><ul>
+<li>MISP (PyMISP): {{ "configured" if misp else "not configured (TIX_MISP_URL / TIX_MISP_KEY)" }} — <code>threatintel misp-push "&lt;campaign&gt;"</code></li>
+<li>OpenCTI (pycti): {{ "configured" if opencti else "not configured (TIX_OPENCTI_URL / TIX_OPENCTI_TOKEN)" }} — <code>threatintel opencti-push</code></li>
+<li>TAXII 2.1 client: {{ "configured" if taxii else "not configured (TIX_TAXII_SERVER)" }}</li>
+<li>TAXII 2.1 server (this instance): <code>{{ base }}/taxii2/</code></li>
+<li>Telegram Bot API (authorised bot, allow-listed chats only): {{ "configured" if telegram else "not configured" }}</li></ul></section>
+</div>
+{% endblock %}

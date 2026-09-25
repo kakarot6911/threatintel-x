@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% from "_macros.html" import prio %}
+{% block title %}Intelligence requirements{% endblock %}
+{% block content %}
+<h1>Intelligence requirements</h1>
+{% for ir, ans in reqs %}<section class="card"><h2>{{ ir.id }} {{ prio(ir.priority) }} {{ ir.question }}</h2>
+<p><b>{{ ans.summary }}</b> <span class="muted">Stakeholders: {{ ir.stakeholders|join(', ') }} · <a href="/api/v1/requirements/{{ ir.id }}">JSON</a></span></p>
+{% if ans.rows %}<details><summary>{{ ans.rows|length }} row(s)</summary><pre>{{ ans.rows|tojson(indent=2) }}</pre></details>{% endif %}</section>
+{% else %}<p>No requirements loaded — load the demo from <a href="/collect">Collect</a>.</p>{% endfor %}
+{% endblock %}

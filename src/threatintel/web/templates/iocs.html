@@ -1,0 +1,11 @@
+{% extends "base.html" %}{% from "_macros.html" import level, syn %}
+{% block title %}IOCs{% endblock %}
+{% block content %}
+<h1>Observables</h1>
+<form method="get" class="inline"><label>Search <input name="q" value="{{ q }}" maxlength="200"></label>
+<label>Type <select name="type"><option value="">any</option>{% for t in types %}<option{% if t==type %} selected{% endif %}>{{ t }}</option>{% endfor %}</select></label><button>Filter</button></form>
+<table><thead><tr><th>Type</th><th>Value</th><th>Confidence</th><th>Sightings</th><th>First / last seen</th><th>Flags</th></tr></thead><tbody>
+{% for r in rows %}<tr><td>{{ r.o.type.value }}</td><td><a href="/investigate?q={{ r.o.value|urlencode }}"><code>{{ r.o.value }}</code></a> {{ syn(r.o.synthetic) }}</td>
+<td>{% if r.conf %}{{ level(r.conf.level) }} {{ r.conf.score }}{% endif %}</td><td>{{ r.o.sightings }}</td><td>{{ r.o.first_seen.date() }} / {{ r.o.last_seen.date() }}</td><td class="muted">{{ r.o.flags|join(', ') }}{% if not r.o.actionable %} not actionable{% endif %}</td></tr>
+{% else %}<tr><td colspan="6">No observables.</td></tr>{% endfor %}</tbody></table>
+{% endblock %}

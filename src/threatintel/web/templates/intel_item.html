@@ -1,0 +1,36 @@
+{% extends "base.html" %}{% from "_macros.html" import prio, level, syn, factors %}
+{% block title %}{{ item.title }}{% endblock %}
+{% block content %}
+<p class="crumbs"><a href="/intel">Intelligence</a> /</p>
+<h1>{{ item.title }} {{ syn(item.synthetic) }}</h1>
+<p class="muted">{{ item.source_name }} · reliability {{ item.source_reliability.value }} ({{ reliability_labels[item.source_reliability.value] }}) · credibility {{ item.information_credibility.value }} ({{ credibility_labels[item.information_credibility.value] }}) · {{ item.statement_type.value|replace('_',' ') }}{% if item.redactions %} · <strong>{{ item.redactions }} secret(s) redacted before storage</strong>{% endif %}</p>
+<div class="grid2">
+<section class="card"><h2>Raw content <small>(as stored, post-redaction)</small></h2><pre class="raw">{{ item.content }}</pre>
+{% if item.metadata.analyst_assessment %}<h3>Analyst assessment (kept separate from the raw report)</h3><p>{{ item.metadata.analyst_assessment }}</p>{% endif %}
+</section>
+<section class="card"><h2>Assessment</h2>
+{% if a.priority %}<p>{{ prio(a.priority.level) }} <span class="muted">{{ a.priority.statement }}</span></p>{% endif %}
+{% if a.attribution %}<h3>Attribution {{ level(a.attribution.level) }}</h3><p>{{ a.attribution.statement }}</p>
+<ul>{% for c in a.attribution.caveats %}<li class="muted">{{ c }}</li>{% endfor %}</ul>
+{% if a.attribution.alternatives %}<table class="compact"><thead><tr><th>Hypothesis</th><th>Score</th><th>Level</th><th>Evidence categories</th></tr></thead><tbody>
+{% for h in a.attribution.alternatives %}<tr><td>{{ h.actor }}</td><td>{{ '%.2f'|format(h.score) }}</td><td>{{ level(h.level) }}</td><td>{{ h.categories|join(', ') }}</td></tr>{% endfor %}</tbody></table>{% endif %}
+{% endif %}
+{% if a.correlation %}<h3>Correlation with known campaigns</h3><p>{{ a.correlation.statement }}</p>{% endif %}
+{% if a.confidence %}<h3>Confidence {{ level(a.confidence.level) }} ({{ a.confidence.score }})</h3>{{ factors(a.confidence) }}{% endif %}
+</section>
+</div>
+<div class="grid2">
+<section class="card"><h2>Observables ({{ observables|length }})</h2>
+<table class="compact"><tbody>{% for o in observables %}<tr><td>{{ o.type.value }}</td><td><a href="/investigate?q={{ o.value|urlencode }}"><code>{{ o.value }}</code></a></td><td>{% if not o.actionable %}<span class="muted">{{ o.flags|join(', ') or 'not actionable' }}</span>{% endif %}</td></tr>{% endfor %}</tbody></table>
+<h3>ATT&amp;CK mapping</h3><ul>{% for t in techniques %}<li><a href="{{ t.t.url }}" rel="noopener noreferrer" target="_blank">{{ t.t.technique_id }}</a> {{ t.t.name }} <span class="muted">— {{ t.rel.description }} ({{ t.rel.evidence|join('; ') }})</span></li>{% else %}<li class="muted">none</li>{% endfor %}</ul>
+</section>
+<section class="card"><h2>Lifecycle <span class="status">{{ status }}</span></h2>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+<form method="post" action="/intel/{{ item.id }}/transition" class="inline">
+<label>Move to <select name="to">{% for s in allowed %}<option>{{ s }}</option>{% endfor %}</select></label>
+<label>Analyst <input name="by" required maxlength="120" placeholder="your name"></label>
+<label>Note <input name="note" maxlength="2000"></label><button type="submit">Record</button></form>
+<ol class="history">{% for h in history %}<li>{{ h.at.strftime('%Y-%m-%d %H:%M') }} — {{ h.from_status.value if h.from_status else '∅' }} → <b>{{ h.to_status.value }}</b> by {{ h.by }}{% if h.note %} <span class="muted">({{ h.note }})</span>{% endif %}</li>{% endfor %}</ol>
+</section>
+</div>
+{% endblock %}

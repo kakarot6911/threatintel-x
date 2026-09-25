@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}{{ prod.title }}{% endblock %}
+{% block content %}
+<p class="crumbs"><a href="/reports">Reports</a> /</p>
+<p><a class="button" href="/api/v1/reports/{{ kind }}?subject={{ subject|urlencode }}">Download Markdown</a></p>
+<pre class="report">{{ prod.body_markdown }}</pre>
+{% endblock %}

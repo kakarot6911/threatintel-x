@@ -1,0 +1,10 @@
+{% macro prio(p) -%}<span class="badge prio-{{ p|lower }}">{{ p }}</span>{%- endmacro %}
+{% macro level(l) -%}<span class="badge lvl-{{ (l or 'none')|lower|replace(' ','-') }}">{{ l or "—" }}</span>{%- endmacro %}
+{% macro syn(flag) -%}{% if flag %}<span class="badge synthetic" title="Fictional demonstration data">SYNTHETIC</span>{% endif %}{%- endmacro %}
+{% macro factors(a) -%}
+{% if a and a.factors %}
+<table class="compact"><thead><tr><th>Factor</th><th>Weight</th><th>Value</th><th>Points</th><th>Why</th></tr></thead><tbody>
+{% for f in a.factors %}<tr><td>{{ f.name|replace('_',' ') }}</td><td>{{ '%.0f'|format(f.weight*100) }}%</td><td>{{ '%.2f'|format(f.value) }}</td><td>{{ '%.1f'|format(f.contribution) }}</td><td>{{ f.explanation }}</td></tr>{% endfor %}
+</tbody></table>
+{% endif %}
+{%- endmacro %}

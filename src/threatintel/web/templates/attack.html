@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}ATT&CK{% endblock %}
+{% block content %}
+<h1>ATT&amp;CK coverage of tracked campaigns</h1>
+<p class="muted">{{ kb.domain }} v{{ kb.version }} ({{ kb.techniques|length }} techniques loaded, version read from the bundle) · {{ used }} technique(s) observed.</p>
+<div class="matrix">{% for col in matrix %}<div class="col"><h3>{{ col.tactic }}</h3>
+{% for t, camps in col.techniques %}<a class="cell" href="{{ t.url }}" target="_blank" rel="noopener noreferrer" title="{{ camps|join(', ') }}"><b>{{ t.technique_id }}</b> {{ t.name }}<span class="n">{{ camps|length }}</span></a>{% else %}<p class="muted">—</p>{% endfor %}
+</div>{% endfor %}</div>
+{% endblock %}
