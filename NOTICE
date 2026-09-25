@@ -1,0 +1,13 @@
+THREATINTEL-X bundles third-party reference data:
+
+* data/attack/enterprise-attack-lite.json — a field-trimmed copy of MITRE ATT&CK® Enterprise
+  (release read from the bundle's x-mitre-collection object). © The MITRE Corporation. This work is
+  reproduced and distributed with the permission of The MITRE Corporation under the ATT&CK Terms of Use
+  (https://attack.mitre.org/resources/legal-and-branding/terms-of-use/). ATT&CK® is a registered
+  trademark of The MITRE Corporation.
+
+* data/reference/iana_tlds.txt — the IANA list of top-level domains
+  (https://data.iana.org/TLD/tlds-alpha-by-domain.txt).
+
+All actors, campaigns, malware families, infrastructure, victims, forum posts and messages in
+data/synthetic/ are FICTIONAL.

@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+build/
+dist/
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Runtime data (never commit databases, exports or secrets)
+data/*.db
+data/*.db-*
+data/exports/*
+!data/exports/.gitkeep
+data/raw/*
+!data/raw/.gitkeep
+data/attack/enterprise-attack.json
+.env
+*.pem
+*.key
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+.claude/settings.local.json
