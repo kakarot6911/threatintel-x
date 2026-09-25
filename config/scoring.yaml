@@ -1,0 +1,117 @@
+# Transparent, tunable scoring configuration. Every number here appears in the
+# explanation attached to the score it produces. Change it, and the ADR log should say why.
+
+confidence:
+  weights:            # must sum to 1.0
+    source_reliability: 0.20
+    information_credibility: 0.20
+    corroboration: 0.25
+    recency: 0.10
+    specificity: 0.10
+    technical_evidence: 0.15
+  bands:              # lower bound (inclusive) of each band, 0-100
+    VERY HIGH: 90
+    HIGH: 70
+    MEDIUM: 40
+    LOW: 0
+  reliability:        # Admiralty source reliability -> 0..1
+    A: 1.0
+    B: 0.8
+    C: 0.6
+    D: 0.4
+    E: 0.2
+    F: 0.3            # cannot be judged: treated conservatively, not as neutral
+  credibility:        # Admiralty information credibility -> 0..1
+    "1": 1.0
+    "2": 0.8
+    "3": 0.6
+    "4": 0.4
+    "5": 0.2
+    "6": 0.3
+  corroboration:      # independent origins -> 0..1
+    "1": 0.0
+    "2": 0.5
+    "3": 0.8
+    "4": 1.0
+  half_life_days:     # recency decay per observable type
+    ipv4: 30
+    ipv6: 30
+    url: 30
+    domain: 120
+    email: 180
+    md5: 365
+    sha1: 365
+    sha256: 365
+    default: 90
+  specificity:        # how uniquely an observable identifies malicious activity
+    sha256: 1.0
+    sha1: 0.95
+    md5: 0.9
+    url: 0.85
+    email: 0.7
+    domain: 0.7
+    btc-address: 0.8
+    eth-address: 0.8
+    telegram-ref: 0.5
+    ipv4: 0.5
+    ipv6: 0.5
+    cve: 0.3
+    attack-technique: 0.2
+    default: 0.5
+
+correlation:
+  # weight = how strongly a shared value links two clusters (noisy-OR combined)
+  signals:
+    shared_hash: 0.90
+    shared_url: 0.85
+    shared_domain: 0.75
+    shared_email: 0.70
+    shared_certificate: 0.80
+    shared_crypto_address: 0.80
+    shared_ip: 0.55
+    shared_malware: 0.60
+    shared_commodity_malware: 0.15
+    shared_nameserver: 0.20
+    shared_asn: 0.10
+    shared_cve: 0.25
+    shared_technique: 0.05       # per technique, TTPs are individually weak
+    shared_target_sector: 0.10
+    shared_alias: 0.95
+    temporal_overlap: 0.10
+  max_technique_contribution: 0.45
+
+attribution:
+  # evidence category -> weight when present
+  category_weights:
+    infrastructure: 0.55
+    malware: 0.60
+    tooling: 0.35
+    ttp: 0.40
+    targeting: 0.20
+    temporal: 0.10
+    language: 0.15
+    public_reporting: 0.45
+    campaign: 0.60
+  thresholds:
+    HIGH: {min_score: 0.80, min_categories: 3, min_independent_sources: 2, requires_non_infrastructure: true}
+    MEDIUM: {min_score: 0.55, min_categories: 2, min_independent_sources: 1}
+    LOW: {min_score: 0.25, min_categories: 1, min_independent_sources: 1}
+  contested_margin: 0.10   # top-2 hypotheses closer than this -> downgrade one level
+
+priority:
+  bands:                   # lower bound of priority score (0-1)
+    P1: 0.45
+    P2: 0.28
+    P3: 0.14
+    P4: 0.05
+    P5: 0.0
+  impact:
+    active_exploitation: 0.95
+    ransomware: 0.90
+    exposed_credential: 0.80
+    active_c2: 0.80
+    critical_vulnerability: 0.75
+    malware_delivery: 0.65
+    phishing: 0.55
+    reconnaissance: 0.30
+    default: 0.30
