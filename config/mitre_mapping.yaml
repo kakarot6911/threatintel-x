@@ -1,0 +1,39 @@
+# Curated keyword -> ATT&CK technique rules (deterministic, explainable).
+# Rules referencing a technique absent from the loaded ATT&CK release are ignored at load time.
+# confidence: how strongly the phrase implies the technique (0-100). Keyword hits are
+# SUGGESTIONS for analyst review, weaker than an explicit technique id in the source.
+rules:
+  - {technique: T1566.001, confidence: 70, keywords: ["spearphishing attachment", "malicious attachment", "weaponized document", "macro-enabled document"]}
+  - {technique: T1566.002, confidence: 70, keywords: ["spearphishing link", "phishing link", "credential harvesting page", "phishing page"]}
+  - {technique: T1566, confidence: 55, keywords: ["phishing", "phishing email", "phishing campaign"]}
+  - {technique: T1190, confidence: 70, keywords: ["exploited a public-facing", "exploit public-facing", "exploitation of the vpn", "exploiting the vpn", "exploited the vpn appliance", "remote code execution vulnerability"]}
+  - {technique: T1133, confidence: 55, keywords: ["external remote services", "exposed rdp", "vpn access"]}
+  - {technique: T1078, confidence: 60, keywords: ["valid accounts", "stolen credentials", "compromised credentials", "credential reuse"]}
+  - {technique: T1110.004, confidence: 70, keywords: ["credential stuffing"]}
+  - {technique: T1110, confidence: 55, keywords: ["brute force", "brute-force", "password spraying"]}
+  - {technique: T1059.001, confidence: 70, keywords: ["powershell"]}
+  - {technique: T1059.003, confidence: 60, keywords: ["cmd.exe", "windows command shell"]}
+  - {technique: T1204.002, confidence: 60, keywords: ["user opened", "user execution", "victim opened the attachment"]}
+  - {technique: T1547.001, confidence: 70, keywords: ["run key", "registry run keys", "startup folder"]}
+  - {technique: T1053.005, confidence: 70, keywords: ["scheduled task", "schtasks"]}
+  - {technique: T1003.001, confidence: 75, keywords: ["lsass", "mimikatz"]}
+  - {technique: T1555.003, confidence: 70, keywords: ["browser credentials", "saved browser passwords", "credentials from web browsers"]}
+  - {technique: T1539, confidence: 70, keywords: ["session cookie theft", "steals session cookies", "stealing session cookies"]}
+  - {technique: T1056.001, confidence: 70, keywords: ["keylogger", "keylogging"]}
+  - {technique: T1071.001, confidence: 65, keywords: ["https beacon", "http beacon", "c2 over https", "web protocols"]}
+  - {technique: T1071.004, confidence: 70, keywords: ["dns tunneling", "dns tunnelling", "c2 over dns"]}
+  - {technique: T1568.002, confidence: 75, keywords: ["domain generation algorithm", "dga"]}
+  - {technique: T1573, confidence: 55, keywords: ["encrypted channel", "encrypted c2"]}
+  - {technique: T1105, confidence: 60, keywords: ["ingress tool transfer", "downloaded additional payloads", "second-stage payload"]}
+  - {technique: T1102, confidence: 60, keywords: ["telegram api for c2", "dead drop resolver", "legitimate web service for c2"]}
+  - {technique: T1090, confidence: 55, keywords: ["proxy chain", "residential proxies", "proxied through"]}
+  - {technique: T1027, confidence: 55, keywords: ["obfuscated", "packed payload", "base64-encoded payload"]}
+  - {technique: T1041, confidence: 65, keywords: ["exfiltration over c2", "exfiltrated over the c2 channel"]}
+  - {technique: T1567.002, confidence: 70, keywords: ["exfiltration to cloud storage", "uploaded to mega", "rclone"]}
+  - {technique: T1560, confidence: 55, keywords: ["archived collected data", "staged in archives", "7-zip archive"]}
+  - {technique: T1486, confidence: 80, keywords: ["encrypted files", "data encrypted for impact", "file encryption", "ransom note"]}
+  - {technique: T1490, confidence: 75, keywords: ["deleted shadow copies", "vssadmin delete", "inhibit system recovery"]}
+  - {technique: T1489, confidence: 60, keywords: ["stopped services", "service stop"]}
+  - {technique: T1021.001, confidence: 65, keywords: ["lateral movement via rdp", "remote desktop protocol"]}
+  - {technique: T1583.001, confidence: 60, keywords: ["registered lookalike domains", "typosquatted domains", "newly registered domains"]}
+  - {technique: T1657, confidence: 55, keywords: ["extortion", "financial theft"]}
