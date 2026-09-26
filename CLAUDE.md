@@ -11,6 +11,7 @@ It is a portfolio/research project. Favour correctness, provenance and explainab
 - `make test` / `make lint` / `make type` / `make security`
 - `.venv/bin/threatintel demo` — synthetic end-to-end run · `.venv/bin/threatintel serve` — API + TAXII + UI
 - `python scripts/build_synthetic_world.py` — regenerate `data/synthetic/world.json`
+- Real data (separate DB): `TIX_DATABASE_URL=sqlite:///$PWD/data/threatintel-real.db TIX_ONLINE=true .venv/bin/threatintel collect-real`
 
 ## Engineering principles
 1. Build incrementally; one roadmap phase at a time (see @docs/ROADMAP.md).

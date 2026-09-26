@@ -49,6 +49,11 @@ IOCs, investigation with pivots, ATT&CK matrix, reports, IRs, sources, integrati
 Auth (key/Basic/Bearer, fail-closed), CSP, CSRF, body limits, XSS/CSV/Markdown output encoding,
 defusedxml, SSRF guard, container hardening, bandit + pip-audit in CI.
 
+## Phase 13 — Real-world intelligence ✅
+`threatintel collect-real`: full MITRE ATT&CK knowledge (groups, software, campaigns, ~18k relationships),
+CISA KEV (with ransomware-use flag), abuse.ch Feodo Tracker + URLhaus, eight public research RSS feeds
+(full article bodies), live RDAP + Team Cymru enrichment. Precision rules from measured data (ADR-012).
+
 ## Next (not started)
 - ⬜ Live MISP + OpenCTI docker lab and contract tests against real instances
 - ⬜ Alembic migrations (schema is currently created via `create_all`)

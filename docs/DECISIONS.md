@@ -16,3 +16,4 @@ with a new ADR.
 | [009](decisions/ADR-009-free-text-linking.md) | Conservative entity linking from free text |
 | [010](decisions/ADR-010-server-rendered-ui.md) | Server-rendered workbench, strict CSP |
 | [011](decisions/ADR-011-offline-by-default.md) | Offline by default, SSRF-guarded when online |
+| [012](decisions/ADR-012-real-data-ingestion.md) | Rules for ingesting real-world intelligence (derived from measured data) |

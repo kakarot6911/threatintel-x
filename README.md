@@ -11,8 +11,9 @@ with every judgement explained, every object traceable to its source, and no LLM
 ![ATT%26CK](https://img.shields.io/badge/ATT%26CK-v19.2-red)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-> **All demonstration intelligence is SYNTHETIC** — fictional actors and campaigns living only in
-> reserved documentation address space (RFC 5737 / 2606 / 5398). It is labelled at every layer.
+> Two modes, two databases: a **synthetic demo world** (fictional, labelled at every layer, in reserved
+> documentation address space) and a **real-data mode** that ingests MITRE ATT&CK, CISA KEV, abuse.ch and
+> public threat-research feeds.
 
 ![Analyst dashboard](docs/screenshots/dashboard.png)
 
@@ -58,6 +59,45 @@ threatintel misp-push "Stolen Keys" --dry-run
 threatintel requirement IR-003
 ```
 
+## Real data
+```bash
+export TIX_DATABASE_URL=sqlite:///$PWD/data/threatintel-real.db TIX_ONLINE=true
+.venv/bin/threatintel collect-real          # ~20 min, mostly rate-limited RDAP enrichment
+.venv/bin/threatintel serve
+```
+| Source | What it contributes |
+|---|---|
+| MITRE ATT&CK (full release) | ~176 groups, ~820 software, 56 campaigns, ~18k uses/attributed-to links |
+| CISA Known Exploited Vulnerabilities | ~1,700 exploited CVEs incl. ransomware-use flag (drives priority) |
+| abuse.ch Feodo Tracker / URLhaus | live botnet C2 IPs and online malware-download URLs |
+| 8 research feeds (CISA, DFIR Report, Unit 42, Microsoft, Securelist, Talos, ESET, BleepingComputer) | full articles → IOCs, CVEs, techniques, actor mentions |
+| RDAP + Team Cymru | registration and ASN context (active DNS is opt-in: it would query attacker name servers) |
+
+Real data broke assumptions the synthetic world never tested; each fix was measured, not guessed
+([ADR-012](docs/decisions/ADR-012-real-data-ingestion.md)): ~200 ATT&CK names that are English words
+(*Play, Royal, Silence, Net*) need a qualifier ("Play ransomware"); publishers that defang IOCs have their
+plain links treated as references; citation domains and abused services (`gateway.icloud.com`) are never
+blockable IOCs, though the specific defanged URL is; `Mail.Read` is a Graph permission, not a domain;
+enrichment-derived name servers are context.
+
+| Real article assessment (Microsoft TI) | Real Feodo C2 IP → QakBot → Storm-1811 |
+|---|---|
+| ![](docs/screenshots/real-incident.png) | ![](docs/screenshots/real-investigate.png) |
+
+### Blind attribution test on real campaigns
+`scripts/evaluate_attribution.py` hides MITRE's attribution for each of its 25 attributed campaigns and lets
+the engine attribute from technical evidence alone against all ~176 groups:
+
+| Engine's level | Campaigns | Top hypothesis = MITRE's group |
+|---|---|---|
+| MEDIUM | 8 | **8 / 8** |
+| LOW | 7 | 5 / 7 |
+| Insufficient evidence (abstains) | 10 | 0 / 10 |
+
+Top-1 overall 13/25, top-3 16/25 (random: 1/176). The confidence levels are calibrated in the useful
+direction: it abstains exactly where it would be wrong. *Caveat:* ATT&CK's group→software/technique links
+partly derive from the same reporting as the campaigns, so this measures consistency with ATT&CK, not ground truth.
+
 ## A worked example (from the synthetic world)
 Our SOC reports beaconing to `192.0.2.52`, FortiOS exploitation, Mimikatz and file encryption:
 
@@ -94,7 +134,7 @@ Details: [ARCHITECTURE](docs/ARCHITECTURE.md) · [CTI methodology](docs/CTI_METH
 
 ## Engineering
 - **Python 3.12**, FastAPI, SQLAlchemy 2.0 (SQLite / PostgreSQL), Pydantic v2, stix2, taxii2-client, PyMISP, NetworkX.
-- **163 tests**, ~94 % coverage; CI runs ruff, mypy, bandit, pip-audit, tests on 3.12 + 3.13, the full
+- **176 tests**, ~94 % coverage; CI runs ruff, mypy, bandit, pip-audit, tests on 3.12 + 3.13, the full
   pipeline on **PostgreSQL 16**, and a Docker build + smoke test (non-root, read-only FS).
 - Real **MITRE ATT&CK Enterprise v19.2** data; version read from the bundle, never hard-coded.
 - Security: SSRF-guarded HTTP, defusedxml, fail-closed auth, strict CSP, CSRF origin checks, XSS/CSV/Markdown
