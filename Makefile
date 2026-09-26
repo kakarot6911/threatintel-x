@@ -29,6 +29,9 @@ security:           ## static security analysis + dependency audit
 
 check: lint type security test   ## everything CI runs
 
+eval-real:          ## blind attribution evaluation on the real-data DB
+	TIX_DATABASE_URL=sqlite:///$(CURDIR)/data/threatintel-real.db $(PY) scripts/evaluate_attribution.py
+
 docker:
 	docker build -t threatintel-x:local .
 

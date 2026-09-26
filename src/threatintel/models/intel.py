@@ -42,6 +42,8 @@ class Source(TixModel):
     derived_from: str | None = None
     synthetic: bool = False
     internal: bool = False  # first-party telemetry (our SOC/EDR): always organisation-relevant
+    # False for publishers that defang their indicators: their plain links/IPs are references, not IOCs.
+    plain_indicators: bool = True
     enabled: bool = True
 
 

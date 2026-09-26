@@ -49,6 +49,8 @@ class Repository:
     def __init__(self, engine: Engine) -> None:
         self.engine = engine
         self.Session = make_session_factory(engine)
+        # Bumped on every write that changes the knowledge graph; in-memory indexes compare against it.
+        self.revision = 0
 
     @classmethod
     def from_url(cls, url: str, *, create: bool = True) -> Repository:
@@ -161,6 +163,7 @@ class Repository:
 
     # -------------------------------------------------------------- observables
     def upsert_observable(self, obs: Observable, prov: Provenance | None = None) -> Observable:
+        self.revision += 1
         with self.Session.begin() as s:
             row = s.get(ObservableRow, obs.id)
             if row is None:
@@ -254,6 +257,7 @@ class Repository:
 
     # ----------------------------------------------------------------- entities
     def upsert_entity(self, entity: E, prov: Provenance | None = None) -> E:
+        self.revision += 1
         with self.Session.begin() as s:
             row = s.get(EntityRow, entity.id)
             if row is not None:
@@ -355,12 +359,23 @@ class Repository:
         with self.Session() as s:
             names = {r.id: r.name for r in s.scalars(select(EntityRow))}
             for a in s.scalars(select(AliasRow)):
-                if a.entity_id in names and len(a.alias) >= 3:
+                if a.entity_id in names and len(a.alias) >= 4:
                     out.setdefault(a.entity_type, {})[a.alias] = names[a.entity_id]
         return out
 
+    def uppercase_aliases(self) -> frozenset[str]:
+        """Lower-cased aliases the knowledge base writes in ALL CAPS (e.g. HAFNIUM, NOBELIUM)."""
+        out: set[str] = set()
+        with self.Session() as s:
+            for data in s.scalars(select(EntityRow.data)):
+                for name in [data.get("name", ""), *data.get("aliases", [])]:
+                    if isinstance(name, str) and name.isupper():
+                        out.add(name.lower())
+        return frozenset(out)
+
     # ------------------------------------------------------------ relationships
     def upsert_relationship(self, rel: Relationship) -> Relationship:
+        self.revision += 1
         with self.Session.begin() as s:
             row = s.get(RelationshipRow, rel.id)
             if row is None:
@@ -417,6 +432,7 @@ class Repository:
 
     # -------------------------------------------------------------- enrichments
     def save_enrichment(self, result: EnrichmentResult) -> None:
+        self.revision += 1
         with self.Session.begin() as s:
             s.add(
                 EnrichmentRow(
@@ -570,6 +586,45 @@ class Repository:
                     )
                 )
             )
+
+    def graph_snapshot(self) -> dict[str, Any]:
+        """Bulk read of everything profile building needs (a handful of queries, not one per row)."""
+        with self.Session() as s:
+            rels = [
+                (r.source_ref, r.target_ref, r.relationship_type, r.confidence, r.id)
+                for r in s.scalars(select(RelationshipRow))
+            ]
+            entities = {r.id: self._entity_from_json(r) for r in s.scalars(select(EntityRow))}
+            observables = {
+                r.id: (ObservableType(r.type), r.value, r.actionable)
+                for r in s.scalars(select(ObservableRow))
+            }
+            origins: dict[str, set[tuple[str, str]]] = {}
+            for subject_id, data in s.execute(
+                select(ProvenanceRow.subject_id, ProvenanceRow.data).where(
+                    ProvenanceRow.subject_id.like("observable--%")
+                    | ProvenanceRow.subject_id.like("relationship--%")
+                )
+            ):
+                origins.setdefault(subject_id, set()).add(
+                    (str(data.get("derived_from") or data.get("source_id")), str(data.get("source_type")))
+                )
+            certs: dict[tuple[str, str], set[str]] = {}
+            for r in s.scalars(select(EnrichmentRow).where(EnrichmentRow.ok.is_(True))):
+                cert = (r.data.get("result") or {}).get("certificate_sha256")
+                if cert:
+                    certs.setdefault((r.observable_type, r.observable), set()).add(str(cert))
+        return {
+            "relationships": rels,
+            "entities": entities,
+            "observables": observables,
+            "origins": origins,
+            "certificates": certs,
+        }
+
+    @staticmethod
+    def _entity_from_json(row: EntityRow) -> Entity:
+        return ENTITY_CLASSES[row.entity_type].model_validate(row.data)
 
     def has_synthetic(self) -> bool:
         with self.Session() as s:

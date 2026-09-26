@@ -19,6 +19,7 @@ from threatintel.analysis.correlation import Profile
 from threatintel.analysis.lifecycle import PIPELINE_PATH
 from threatintel.analysis.priority import PriorityInput, score_priority
 from threatintel.enrichment.engine import technical_evidence
+from threatintel.extraction.benign import host_of, is_benign, load_benign, registrable
 from threatintel.extraction.redaction import redact
 from threatintel.extraction.validate import validate
 from threatintel.models.common import LifecycleStatus, ObservableType, Provenance, SourceType, utcnow
@@ -52,6 +53,13 @@ INDICATOR_TYPES = {
     ObservableType.TELEGRAM_REF,
 }
 HASH_TYPES = {ObservableType.MD5, ObservableType.SHA1, ObservableType.SHA256}
+NETWORK_TYPES = {
+    ObservableType.IPV4,
+    ObservableType.IPV6,
+    ObservableType.DOMAIN,
+    ObservableType.URL,
+    ObservableType.EMAIL,
+}
 ENRICHABLE = {
     ObservableType.IPV4,
     ObservableType.IPV6,
@@ -154,11 +162,30 @@ class Pipeline:
         )
 
         observables: list[Observable] = []
+        benign = load_benign(str(self.p.settings.config_dir / "benign_domains.txt"))
+        feed_host = host_of(ObservableType.URL, item.url or "") if item.url else None
+        if feed_host:
+            benign = benign | {registrable(feed_host)}
+        source = self.repo.get_source(item.source_id)
+        references_only = bool(source and not source.plain_indicators and not item.synthetic)
         for ex in extraction.observables:
             check = validate(ex.type, ex.value, known_techniques=self.p.kb.technique_ids)
             actionable = check.actionable
+            flags = list(check.flags)
             if item.synthetic and not actionable and set(check.flags) <= SYNTHETIC_TOLERATED_FLAGS:
                 actionable = True  # the synthetic world deliberately lives in documentation space
+            if (
+                actionable
+                and is_benign(ex.type, ex.value, benign)
+                and (not ex.defanged or ex.type == ObservableType.DOMAIN)
+            ):
+                # A citation, or the host of an abused legitimate service: the specific (defanged) URL may be
+                # an indicator, but blocking e.g. gateway.icloud.com itself never is.
+                actionable = False
+                flags.append("known-benign")
+            elif actionable and references_only and not ex.defanged and ex.type in NETWORK_TYPES:
+                actionable = False  # this publisher defangs its IOCs; a plain link is a reference
+                flags.append("reference-link")
             obs = self.repo.upsert_observable(
                 Observable(
                     type=ex.type,
@@ -166,7 +193,7 @@ class Pipeline:
                     first_seen=item.published_at or item.collection_timestamp,
                     last_seen=item.published_at or item.collection_timestamp,
                     actionable=actionable,
-                    flags=check.flags,
+                    flags=flags,
                     synthetic=item.synthetic,
                 ),
                 prov,
@@ -518,6 +545,8 @@ class Pipeline:
         vulns = [v for v in named.get("vulnerability", []) if isinstance(v, Vulnerability)]
         if any(v.known_exploited for v in vulns):
             factors.append("active_exploitation")
+        if any(v.ransomware_use for v in vulns) and "ransomware" not in factors:
+            factors.append("ransomware")
         cvss = max((v.cvss for v in vulns if v.cvss is not None), default=None)
         if result.credential_exposures:
             factors.append("exposed_credential")

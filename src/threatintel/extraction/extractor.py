@@ -46,6 +46,19 @@ AMBIGUOUS_TLDS = frozenset(
 )
 
 
+MIN_ALIAS_LEN = 4
+QUALIFIER_LOOKAHEAD = (
+    r"(?=[\s-]+(?:ransomware|malware|group|gang|backdoor|rat|trojan|loader|botnet|stealer|infostealer|apt|"
+    r"team|actor|operators?|affiliates?|campaign|implant|wiper|toolkit|framework|spyware|dropper|variant|"
+    r"family|threat\s+actor)\b)"
+)
+
+
+def _alias_alt(aliases: list[str]) -> str:
+    alts = sorted((re.escape(a) for a in aliases), key=len, reverse=True)
+    return r"(?<![\w-])(" + "|".join(alts) + ")"
+
+
 @dataclass
 class ExtractionResult:
     observables: list[ExtractedObservable] = field(default_factory=list)
@@ -75,17 +88,32 @@ class IOCExtractor:
         self,
         entity_aliases: dict[str, dict[str, str]] | None = None,
         known_techniques: frozenset[str] | None = None,
+        ambiguous: frozenset[str] = frozenset(),
+        uppercase: frozenset[str] = frozenset(),
     ) -> None:
-        """``entity_aliases``: {entity_type: {alias_lower: canonical_name}}."""
+        """``entity_aliases``: {entity_type: {alias_lower: canonical_name}}.
+
+        ``ambiguous``: lower-cased aliases that are ordinary words ("play", "silence"). They match only
+        in ALL CAPS when the knowledge base writes them that way (``uppercase``, e.g. HAFNIUM), or
+        otherwise only when followed by a qualifier ("Play ransomware", "Silence group").
+        """
         self.entity_aliases = entity_aliases or {}
         self.known_techniques = known_techniques
-        self._alias_patterns: dict[str, re.Pattern[str]] = {}
+        self._alias_patterns: dict[str, list[re.Pattern[str]]] = {}
         for etype, aliases in self.entity_aliases.items():
-            if aliases:
-                alts = sorted((re.escape(a) for a in aliases), key=len, reverse=True)
-                self._alias_patterns[etype] = re.compile(
-                    r"(?<![\w-])(" + "|".join(alts) + r")(?![\w-])", re.I
-                )
+            plain = [a for a in aliases if len(a) >= MIN_ALIAS_LEN and a not in ambiguous]
+            word_like = [a for a in aliases if len(a) >= MIN_ALIAS_LEN and a in ambiguous]
+            caps = [a for a in word_like if a in uppercase]
+            qualified = [a for a in word_like if a not in uppercase]
+            patterns = []
+            if plain:
+                patterns.append(re.compile(_alias_alt(plain) + r"(?![\w-])", re.I))
+            if caps:
+                patterns.append(re.compile(_alias_alt([a.upper() for a in caps]) + r"(?![\w-])"))
+            if qualified:
+                patterns.append(re.compile(_alias_alt(qualified) + QUALIFIER_LOOKAHEAD, re.I))
+            if patterns:
+                self._alias_patterns[etype] = patterns
 
     def extract(self, text: str, *, telegram_context: bool = False) -> ExtractionResult:
         refanged, _ = refang(text)
@@ -108,8 +136,15 @@ class IOCExtractor:
                 return
             if obs_type == ObservableType.DOMAIN and not from_container:
                 tld = value.rsplit(".", 1)[-1]
-                if tld in AMBIGUOUS_TLDS and not self._was_defanged(original_lower, obs_type, value):
+                if tld in AMBIGUOUS_TLDS and not self._was_defanged(original_lower, raw):
                     result.rejected.append((obs_type.value, raw, "ambiguous file-extension TLD"))
+                    return
+                labels = raw.split(".")
+                if len(labels) <= 3 and all(
+                    lb[:1].isupper() and any(c.islower() for c in lb) for lb in labels
+                ):
+                    # "Mail.Read", "Files.ReadWrite": API permission / object identifiers, not host names
+                    result.rejected.append((obs_type.value, raw, "TitleCase identifier, not a host name"))
                     return
             check = validate(obs_type, value, known_techniques=self.known_techniques)
             if not check.valid:
@@ -123,7 +158,7 @@ class IOCExtractor:
                     type=obs_type,
                     value=value,
                     raw=raw,
-                    defanged=self._was_defanged(original_lower, obs_type, value),
+                    defanged=self._was_defanged(original_lower, raw),
                     context=_context(refanged, start, end),
                 )
             )
@@ -193,11 +228,12 @@ class IOCExtractor:
         for m in _ATTACK_RE.finditer(refanged):
             add(ObservableType.ATTACK_TECHNIQUE, m.group(0), m.start(), m.end())
 
-        for etype, pattern in self._alias_patterns.items():
-            for m in pattern.finditer(refanged):
-                canonical = self.entity_aliases[etype].get(m.group(1).lower())
-                if canonical:
-                    result.entities.setdefault(etype, set()).add(canonical)
+        for etype, patterns in self._alias_patterns.items():
+            for pattern in patterns:
+                for m in pattern.finditer(refanged):
+                    canonical = self.entity_aliases[etype].get(m.group(1).lower())
+                    if canonical:
+                        result.entities.setdefault(etype, set()).add(canonical)
         return result
 
     def _add_host(self, host: str, add: _AddFn, start: int, end: int) -> None:
@@ -209,10 +245,9 @@ class IOCExtractor:
         add(ObservableType.IPV6 if ":" in host else ObservableType.IPV4, host, start, end)
 
     @staticmethod
-    def _was_defanged(original_lower: str, obs_type: ObservableType, value: str) -> bool:
-        """True when the value only exists in the text after refanging."""
-        probe = (_safe_host(value) or value) if obs_type == ObservableType.URL else value
-        return probe.lower() not in original_lower
+    def _was_defanged(original_lower: str, raw: str) -> bool:
+        """True when the matched string only exists in the text after refanging."""
+        return raw.lower() not in original_lower
 
 
 class _AddFn(Protocol):

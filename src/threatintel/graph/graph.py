@@ -7,6 +7,7 @@ model maps 1:1 onto a Neo4j property graph if scale ever demands it.
 from __future__ import annotations
 
 import math
+from collections import deque
 from html import escape
 from typing import Any
 
@@ -78,24 +79,44 @@ def build_graph(
 
 
 def pivot(g: nx.MultiDiGraph, start: str, max_depth: int = 4, limit: int = 50) -> list[list[dict[str, Any]]]:
-    """IOC -> infrastructure -> campaign -> actor -> TTP style paths (undirected walk, simple paths)."""
+    """Shortest IOC -> infrastructure -> campaign -> actor / TTP paths.
+
+    Breadth-first, O(V+E). Actors and ATT&CK techniques are *endpoints only*: walking through a technique
+    (used by hundreds of groups) or an actor would connect an IOC to unrelated activity.
+    """
     if start not in g:
         return []
     ug = g.to_undirected(as_view=True)
-    targets = [
-        n for n, d in g.nodes(data=True) if d["kind"] in ("threat-actor", "attack-pattern") and n != start
-    ]
-    seen: set[tuple[str, ...]] = set()
-    for t in targets:
-        for path in nx.all_simple_paths(nx.Graph(ug), start, t, cutoff=max_depth):
-            if any(g.nodes[n]["kind"] == "threat-actor" for n in path[1:-1]):
-                continue  # do not pivot *through* an actor into unrelated activity
-            seen.add(tuple(path))
-    ordered = sorted(seen, key=lambda p: (len(p), [g.nodes[n]["label"] for n in p]))[:limit]
+    parent: dict[str, str | None] = {start: None}
+    depth = {start: 0}
+    queue: deque[str] = deque([start])
+    while queue:
+        node = queue.popleft()
+        if depth[node] >= max_depth or (node != start and g.nodes[node]["kind"] in TERMINAL_KINDS):
+            continue
+        for nxt in sorted(ug.neighbors(node)):
+            if nxt not in parent:
+                parent[nxt] = node
+                depth[nxt] = depth[node] + 1
+                queue.append(nxt)
+    paths = []
+    for node in parent:
+        if node == start or g.nodes[node]["kind"] not in TERMINAL_KINDS:
+            continue
+        path: list[str] = []
+        cur: str | None = node
+        while cur is not None:
+            path.append(cur)
+            cur = parent[cur]
+        paths.append(path[::-1])
+    paths.sort(key=lambda p: (len(p), [g.nodes[n]["label"] for n in p]))
     return [
         [{"id": n, "kind": g.nodes[n]["kind"], "label": g.nodes[n]["label"]} for n in path]
-        for path in ordered
+        for path in paths[:limit]
     ]
+
+
+TERMINAL_KINDS = {"threat-actor", "attack-pattern"}
 
 
 def neighborhood(g: nx.MultiDiGraph, center: str, radius: int = 2, limit: int = 60) -> nx.MultiDiGraph:

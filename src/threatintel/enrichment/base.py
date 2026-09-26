@@ -179,6 +179,11 @@ class EnrichmentProvider(ABC):
         except (TransientProviderError, httpx.HTTPError, ValueError, KeyError) as exc:
             log.warning("enrichment %s failed for %s: %s", self.name, obs_type.value, exc)
             return EnrichmentResult(**base, error=f"lookup failed: {type(exc).__name__}")
+        except Exception as exc:  # e.g. resolver misconfiguration during a network change
+            # Enrichment is best-effort context: an unexpected provider failure is recorded as an
+            # error for that provider and must never take the pipeline down.
+            log.warning("enrichment %s crashed for %s: %r", self.name, obs_type.value, exc)
+            return EnrichmentResult(**base, error=f"provider error: {type(exc).__name__}")
         return EnrichmentResult(**base, result=result, confidence=confidence, source_reference=reference)
 
     @abstractmethod

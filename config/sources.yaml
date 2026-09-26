@@ -1,0 +1,14 @@
+# Public threat-research feeds consumed via RSS/Atom (the publishers' intended syndication channel).
+# reliability: Admiralty A-F for the SOURCE's track record (analyst judgement - revise as you learn).
+# plain_indicators: false when the publisher defangs its IOCs - plain links/IPs are then references.
+#   (Measured on real items: CISA/Talos/Securelist plain matches were references, package names or
+#   detection names; Microsoft lists real IOCs undefanged.)
+rss:
+  - {id: src-rss-cisa-advisories, name: "CISA Cybersecurity Advisories", url: "https://www.cisa.gov/cybersecurity-advisories/all.xml", reliability: A, plain_indicators: false}
+  - {id: src-rss-dfir-report, name: "The DFIR Report", url: "https://thedfirreport.com/feed/", reliability: B, plain_indicators: false}
+  - {id: src-rss-unit42, name: "Palo Alto Networks Unit 42", url: "https://unit42.paloaltonetworks.com/feed/", reliability: B, plain_indicators: false}
+  - {id: src-rss-microsoft-ti, name: "Microsoft Threat Intelligence", url: "https://www.microsoft.com/en-us/security/blog/topic/threat-intelligence/feed/", reliability: B, plain_indicators: true}
+  - {id: src-rss-securelist, name: "Kaspersky Securelist", url: "https://securelist.com/feed/", reliability: B, plain_indicators: false}
+  - {id: src-rss-talos, name: "Cisco Talos", url: "https://blog.talosintelligence.com/rss/", reliability: B, plain_indicators: false}
+  - {id: src-rss-welivesecurity, name: "ESET WeLiveSecurity", url: "https://www.welivesecurity.com/en/rss/feed/", reliability: B, plain_indicators: false}
+  - {id: src-rss-bleepingcomputer, name: "BleepingComputer", url: "https://www.bleepingcomputer.com/feed/", reliability: C, plain_indicators: false}

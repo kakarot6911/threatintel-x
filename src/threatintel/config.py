@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     # --- safety switches ---------------------------------------------------
     online: bool = False  # allow outbound network calls (enrichment, feeds, integrations)
     allow_private_destinations: bool = False  # SSRF guard: permit RFC1918/loopback feed URLs
+    active_dns: bool = False  # resolve suspicious domains ourselves (queries reach attacker name servers)
     redaction_key: SecretStr = SecretStr("")  # HMAC key for credential fingerprints (optional)
 
     # --- API / UI ----------------------------------------------------------

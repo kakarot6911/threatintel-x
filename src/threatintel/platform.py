@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from functools import cached_property
+from functools import cached_property, lru_cache
+from pathlib import Path
 
 from threatintel.analysis.attribution import AttributionEngine
 from threatintel.analysis.correlation import CorrelationEngine
@@ -60,5 +61,17 @@ class Platform:
     def extractor(self) -> IOCExtractor:
         """Built per use: the alias dictionary grows as entities are added."""
         return IOCExtractor(
-            entity_aliases=self.repo.alias_dictionary(), known_techniques=self.kb.technique_ids
+            entity_aliases=self.repo.alias_dictionary(),
+            known_techniques=self.kb.technique_ids,
+            ambiguous=load_ambiguous_aliases(str(self.settings.config_dir / "ambiguous_aliases.txt")),
+            uppercase=self.repo.uppercase_aliases(),
         )
+
+
+@lru_cache(maxsize=4)
+def load_ambiguous_aliases(path: str) -> frozenset[str]:
+    p = Path(path)
+    if not p.exists():
+        return frozenset()
+    lines = (line.strip().lower() for line in p.read_text(encoding="utf-8").splitlines())
+    return frozenset(line for line in lines if line and not line.startswith("#"))

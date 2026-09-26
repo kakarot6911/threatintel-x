@@ -143,6 +143,33 @@ def export_stix(
         raise typer.Exit(1)
 
 
+@app.command("collect-real")
+def collect_real(
+    rss_per_feed: Annotated[int, typer.Option(help="newest entries per RSS feed")] = 10,
+    urlhaus_limit: Annotated[int, typer.Option(help="max online URLhaus URLs")] = 300,
+    attack: Annotated[bool, typer.Option("--attack/--no-attack")] = True,
+    kev: Annotated[bool, typer.Option("--kev/--no-kev")] = True,
+    abusech: Annotated[bool, typer.Option("--abusech/--no-abusech")] = True,
+    rss: Annotated[bool, typer.Option("--rss/--no-rss")] = True,
+) -> None:
+    """Collect REAL intelligence: ATT&CK, CISA KEV, abuse.ch, public RSS feeds (needs TIX_ONLINE)."""
+    from threatintel.workflows import run_real
+
+    summary = run_real(
+        _platform(),
+        attack=attack,
+        kev=kev,
+        abusech=abusech,
+        rss=rss,
+        rss_per_feed=rss_per_feed,
+        urlhaus_limit=urlhaus_limit,
+        progress=lambda m: typer.echo(m, err=True),
+    )
+    _echo_json(summary.__dict__)
+    if summary.errors:
+        typer.echo(f"{len(summary.errors)} source(s) failed - see 'errors'", err=True)
+
+
 @app.command()
 def investigate(value: str) -> None:
     """Everything known about an IOC, and why it matters."""

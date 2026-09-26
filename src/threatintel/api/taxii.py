@@ -61,17 +61,26 @@ def build_router(platform_getter: Any) -> APIRouter:
             "media_types": [STIX_MEDIA],
         }
 
+    cache: dict[tuple[str, int], list[dict[str, Any]]] = {}
+
     def objects_for(cid: str, request: Request) -> list[dict[str, Any]]:
         if cid not in COLLECTIONS:
             raise HTTPException(404, "collection not found")
         platform: Platform = platform_getter(request)
+        key = (cid, platform.repo.revision)
+        if key in cache:  # pagination re-requests the same collection: export once per data revision
+            return cache[key]
         bundle = export_stix_bundle(
             platform.repo,
             platform.kb,
             platform.settings,
             include_synthetic=bool(COLLECTIONS[cid]["include_synthetic"]),
         )
-        return sorted(bundle["objects"], key=lambda o: (_added(o), o["id"]))
+        objs = sorted(bundle["objects"], key=lambda o: (_added(o), o["id"]))
+        for stale in [k for k in cache if k[1] != key[1]]:
+            del cache[stale]
+        cache[key] = objs
+        return objs
 
     def filtered(
         objs: list[dict[str, Any]], added_after: str | None, types: str | None, ids: str | None

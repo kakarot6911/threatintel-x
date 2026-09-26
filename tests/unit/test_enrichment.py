@@ -297,3 +297,34 @@ def test_asn_provider(online: Settings) -> None:
     assert r.ok and r.result["asn"] == "AS15169" and r.result["as_name"] == "GOOGLE - Google LLC, US"
     empty = ASNProvider(online, sleep=no_sleep, resolver=FakeResolver({})).enrich(T.IPV4, "8.8.4.4")
     assert empty.result == {"found": False}
+
+
+@respx.mock
+def test_rdap_walks_up_to_registered_domain(online: Settings) -> None:
+    respx.get("https://rdap.org/domain/savannah.nongnu.org").mock(return_value=httpx.Response(400))
+    respx.get("https://rdap.org/domain/nongnu.org").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "ldhName": "NONGNU.ORG",
+                "events": [{"eventAction": "registration", "eventDate": "2003-01-01T00:00:00Z"}],
+            },
+        )
+    )
+    r = RDAPProvider(online, sleep=no_sleep).enrich(T.DOMAIN, "savannah.nongnu.org")
+    assert r.ok and r.result["queried_as"] == "nongnu.org" and r.result["created"].startswith("2003")
+
+
+def test_unexpected_provider_crash_is_contained(online: Settings) -> None:
+    import dns.resolver
+
+    from threatintel.enrichment.providers import ASNProvider
+
+    class Broken:
+        lifetime = 0.0
+
+        def resolve(self, *_: object) -> None:
+            raise dns.resolver.NoResolverConfiguration("no nameservers")
+
+    r = ASNProvider(online, sleep=no_sleep, resolver=Broken()).enrich(T.IPV4, "8.8.8.8")
+    assert r.error == "provider error: NoResolverConfiguration" and r.result == {}

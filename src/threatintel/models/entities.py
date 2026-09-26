@@ -89,7 +89,10 @@ class Vulnerability(Entity):
 
     cvss: float | None = None
     known_exploited: bool = False
+    ransomware_use: bool = False  # CISA KEV "knownRansomwareCampaignUse" == "Known"
     affected_product: str = ""
+    kev_date_added: datetime | None = None
+    kev_due_date: datetime | None = None
 
 
 class Infrastructure(Entity):

@@ -260,3 +260,150 @@ def _why_relevant(
 
 def pipeline_path() -> list[str]:
     return [s.value for s in PIPELINE_PATH]
+
+
+# ============================================================ real-world collection
+@dataclass
+class RealRunSummary:
+    feeds: list[dict[str, Any]] = field(default_factory=list)
+    rss: list[dict[str, Any]] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
+    campaign_attributions: dict[str, int] = field(default_factory=dict)
+
+
+def load_rss_sources(platform: Platform) -> list[Source]:
+    import yaml
+
+    from threatintel.models.common import SourceReliability
+
+    path = platform.settings.config_dir / "sources.yaml"
+    spec = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    return [
+        Source(
+            id=s["id"],
+            name=s["name"],
+            source_type=SourceType.RSS,
+            url=s["url"],
+            reliability=SourceReliability(s.get("reliability", "C")),
+            plain_indicators=bool(s.get("plain_indicators", True)),
+            collection_policy="Public RSS/Atom syndication feed",
+        )
+        for s in spec.get("rss", [])
+    ]
+
+
+def run_real(
+    platform: Platform,
+    *,
+    attack: bool = True,
+    kev: bool = True,
+    abusech: bool = True,
+    rss: bool = True,
+    rss_per_feed: int = 10,
+    urlhaus_limit: int = 300,
+    progress: Any = None,
+) -> RealRunSummary:
+    """Collect from real, publicly permitted sources. Requires TIX_ONLINE=true.
+
+    Every fetch goes through the SSRF-guarded client; a failing source is recorded and skipped
+    - its data is never guessed.
+    """
+    import json
+
+    from threatintel.collectors.feeds import (
+        FEODO_URL,
+        KEV_URL,
+        URLHAUS_URL,
+        import_attack_knowledge,
+        import_feodo,
+        import_kev,
+        import_urlhaus,
+        parse_urlhaus_csv,
+    )
+    from threatintel.collectors.rss import RSSCollector
+    from threatintel.collectors.synthetic import load_requirements
+    from threatintel.net import require_online, safe_get
+
+    def say(msg: str) -> None:
+        if progress:
+            progress(msg)
+
+    settings = require_online(platform.settings)
+    out = RealRunSummary()
+    load_requirements(platform.repo, settings.config_dir / "intelligence_requirements.yaml")
+
+    def _fetch(url: str) -> Any:
+        resp = safe_get(url, settings=settings)
+        resp.raise_for_status()
+        return resp
+
+    def step(name: str, fn: Any) -> None:
+        say(f"-> {name}")
+        try:
+            res = fn()
+            out.feeds.append(res.__dict__ if hasattr(res, "__dict__") else {"feed": name, "result": res})
+        except Exception as exc:  # one broken source must not stop the run; the error is recorded
+            out.errors.append(f"{name}: {type(exc).__name__}: {exc}")
+
+    if attack:
+
+        def _attack() -> Any:
+            path = settings.data_dir / "attack" / "enterprise-attack.json"
+            if not path.exists():
+                from threatintel.collectors.mitre import MITRECollector
+
+                MITRECollector(
+                    Source(id="src-mitre-attack", name="MITRE ATT&CK", source_type=SourceType.MITRE), settings
+                ).sync()
+            return import_attack_knowledge(platform.repo, json.loads(path.read_text(encoding="utf-8")))
+
+        step("MITRE ATT&CK groups/software/campaigns", _attack)
+    if kev:
+        step("CISA KEV", lambda: import_kev(platform.repo, _fetch(KEV_URL).json()))
+    if abusech:
+        step(
+            "abuse.ch Feodo Tracker",
+            lambda: import_feodo(platform.repo, _fetch(FEODO_URL).json()),
+        )
+        step(
+            "abuse.ch URLhaus",
+            lambda: import_urlhaus(
+                platform.repo,
+                parse_urlhaus_csv(_fetch(URLHAUS_URL).text),
+                limit=urlhaus_limit,
+                family_aliases=platform.repo.alias_dictionary().get("malware", {}),
+            ),
+        )
+    if rss:
+        pipeline = Pipeline(platform)
+        for src in load_rss_sources(platform):
+            say(f"-> RSS {src.name}")
+            platform.repo.upsert_source(src)
+            try:
+                resp = safe_get(str(src.url), settings=settings)
+                resp.raise_for_status()
+                payload = resp.content
+                items = sorted(
+                    RSSCollector(src, payload=payload).collect(),
+                    key=lambda i: i.published_at or i.collection_timestamp,
+                    reverse=True,
+                )[:rss_per_feed]
+            except Exception as exc:
+                out.errors.append(f"RSS {src.name}: {type(exc).__name__}: {exc}")
+                continue
+            stats: dict[str, Any] = {"feed": src.name, "items": 0, "new": 0, "observables": 0, "p1_p2": 0}
+            for item in reversed(items):  # oldest first so knowledge accumulates in order
+                try:
+                    res = pipeline.process(item)
+                except Exception as exc:  # one bad item must not abort the run; it is reported
+                    out.errors.append(f"RSS {src.name} item '{item.title[:60]}': {type(exc).__name__}: {exc}")
+                    continue
+                stats["items"] += 1
+                stats["new"] += int(not res.duplicate)
+                stats["observables"] += len(res.observables)
+                stats["p1_p2"] += int(bool(res.priority and res.priority["priority"] in ("P1", "P2")))
+            out.rss.append(stats)
+    say("-> campaign attribution")
+    for a in assess_campaign_attributions(platform):
+        out.campaign_attributions[a.level] = out.campaign_attributions.get(a.level, 0) + 1
+    return out

@@ -98,8 +98,10 @@ class EnrichmentEngine:
             Observable(
                 type=target_type,
                 value=value,
-                actionable=check.actionable or src.synthetic,
-                flags=check.flags,
+                # Derived infrastructure (name servers, ASNs, resolutions) is context for pivoting, not an
+                # indicator in its own right. (The synthetic world keeps it actionable for the demo.)
+                actionable=src.synthetic,
+                flags=sorted({*check.flags, "infrastructure-context"}),
                 synthetic=src.synthetic,
             ),
             prov,

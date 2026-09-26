@@ -70,10 +70,25 @@ class RDAPProvider(EnrichmentProvider):
     base_url = "https://rdap.org"
 
     def _lookup(self, obs_type: T, value: str) -> tuple[dict[str, Any], int, str]:
-        kind = "domain" if obs_type == T.DOMAIN else "ip"
+        if obs_type != T.DOMAIN:
+            return self._query("ip", value)
+        # Registries answer for the *registered* domain only (a.b.example.org -> example.org). Without a
+        # public-suffix list we walk up one label at a time and stop at the first registry answer.
+        labels = value.split(".")
+        url = ""
+        for i in range(len(labels) - 1):
+            candidate = ".".join(labels[i:])
+            result, conf, url = self._query("domain", candidate, missing_ok=True)
+            if result.get("found"):
+                if candidate != value:
+                    result["queried_as"] = candidate
+                return result, conf, url
+        return {"found": False}, 60, url
+
+    def _query(self, kind: str, value: str, missing_ok: bool = False) -> tuple[dict[str, Any], int, str]:
         url = f"{self.base_url}/{kind}/{quote(value, safe='')}"
         resp = self.http_get(url, headers={"Accept": "application/rdap+json"})
-        if resp.status_code == 404:
+        if resp.status_code == 404 or (missing_ok and resp.status_code == 400):
             return {"found": False}, 60, url
         resp.raise_for_status()
         return {"found": True, **parse_rdap(resp.json())}, 90, url
@@ -396,10 +411,14 @@ class SyntheticProvider(EnrichmentProvider):
 
 def default_providers(settings: Any = None) -> list[EnrichmentProvider]:
     s = settings or get_settings()
+    # Active DNS resolution of suspicious domains sends queries towards attacker-controlled name servers
+    # (tipping off operators); it is therefore opt-in via TIX_ACTIVE_DNS. RDAP / Team Cymru only query
+    # registries and Cymru.
+    dns_provider: list[EnrichmentProvider] = [DNSProvider(s)] if s.active_dns else []
     return [
         SyntheticProvider(s),
         RDAPProvider(s),
-        DNSProvider(s),
+        *dns_provider,
         ASNProvider(s),
         VirusTotalProvider(s),
         URLScanProvider(s),

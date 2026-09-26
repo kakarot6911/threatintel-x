@@ -153,3 +153,11 @@ def test_synthetic_collector_is_ordered_and_marked() -> None:
     assert all(i.synthetic for i in items)
     stamps = [i.published_at for i in items]
     assert stamps == sorted(stamps)
+
+
+def test_rss_prefers_full_content() -> None:
+    feed = b"""<?xml version="1.0"?><rss xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel>
+<item><title>T</title><description>short teaser</description>
+<content:encoded><![CDATA[<p>Full article: C2 at evil[.]example</p>]]></content:encoded></item></channel></rss>"""
+    item = next(iter(RSSCollector(src(), payload=feed).collect()))
+    assert "Full article: C2 at evil[.]example" in item.content and "teaser" not in item.content

@@ -121,6 +121,7 @@ class StixExporter:
         self.settings = settings or get_settings()
         self.objects: dict[str, Any] = {}
         self.internal_to_stix: dict[str, str] = {}
+        self._tech_by_stix = {t.stix_id: t for t in kb.techniques.values()}
         self.producer = v21.Identity(
             id=stix_id("identity", "producer"),
             name=self.settings.producer_name,
@@ -334,7 +335,7 @@ class StixExporter:
     def _attack_pattern(self, stix_ap_id: str) -> str | None:
         if stix_ap_id in self.objects:
             return stix_ap_id
-        tech = next((t for t in self.kb.techniques.values() if t.stix_id == stix_ap_id), None)
+        tech = self._tech_by_stix.get(stix_ap_id)
         if tech is None:
             return None
         if MITRE_IDENTITY_ID not in self.objects:

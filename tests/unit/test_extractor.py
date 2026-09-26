@@ -60,3 +60,24 @@ def test_dedup_and_merge() -> None:
 def test_hostile_input_does_not_crash() -> None:
     nasty = "\x00" * 10 + "http://[::1" + "a" * 5000 + "@" * 300 + "[.]" * 200 + "‮" + "T" * 100
     IOCExtractor().extract(nasty)
+
+
+def test_ambiguous_aliases_need_qualifier_or_caps() -> None:
+    aliases = {
+        "malware": {"play": "Play", "emotet": "Emotet"},
+        "threat-actor": {"hafnium": "HAFNIUM", "silence": "Silence"},
+    }
+    ex = IOCExtractor(
+        entity_aliases=aliases,
+        ambiguous=frozenset({"play", "silence", "hafnium"}),
+        uppercase=frozenset({"hafnium"}),
+    )
+    assert ex.extract("Users play games in silence; the hafnium isotope").entities == {}
+    hits = ex.extract("Play ransomware and the Silence group; HAFNIUM exploited it; Emotet spread").entities
+    assert hits == {"malware": {"Play", "Emotet"}, "threat-actor": {"HAFNIUM", "Silence"}}
+    assert IOCExtractor(entity_aliases={"tool": {"cmd": "cmd"}}).extract("run cmd now").entities == {}
+
+
+def test_titlecase_identifiers_are_not_domains() -> None:
+    r = IOCExtractor().extract("The app requested Mail.Read and Files.ReadWrite.All; C2 at bad-host.com")
+    assert r.values(T.DOMAIN) == {"bad-host.com"}

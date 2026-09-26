@@ -23,7 +23,10 @@ from threatintel.net import safe_get
 
 log = logging.getLogger(__name__)
 _TAG_RE = re.compile(r"<[^>]+>")
+_SPACES_RE = re.compile(r"[ \t\u00a0]{2,}")
+_BLANKS_RE = re.compile(r"\s*\n\s*\n\s*")
 _ATOM = "{http://www.w3.org/2005/Atom}"
+_CONTENT = "{http://purl.org/rss/1.0/modules/content/}encoded"  # full article body, when the feed provides it
 
 
 def _text(el: Any, tag: str) -> str:
@@ -32,7 +35,9 @@ def _text(el: Any, tag: str) -> str:
 
 
 def _strip_html(value: str) -> str:
-    return html.unescape(_TAG_RE.sub(" ", value)).strip()
+    text = html.unescape(_TAG_RE.sub(" ", value))
+    text = _SPACES_RE.sub(" ", text)
+    return _BLANKS_RE.sub("\n\n", text).strip()
 
 
 def _parse_date(value: str) -> datetime | None:
@@ -60,7 +65,9 @@ class RSSCollector(Collector):
         if payload is None:
             if not self.source.url:
                 raise ValueError(f"source {self.source.id} has no feed URL")
-            payload = safe_get(self.source.url).content
+            resp = safe_get(self.source.url)
+            resp.raise_for_status()  # never parse an error page as a feed
+            payload = resp.content
         yield from self.parse(payload)
 
     def parse(self, payload: bytes) -> Iterator[CollectedItem]:
@@ -80,7 +87,7 @@ class RSSCollector(Collector):
                 else:
                     title = _text(entry, "title")
                     link = _text(entry, "link") or None
-                    body = _text(entry, "description")
+                    body = _text(entry, _CONTENT) or _text(entry, "description")
                     published = _parse_date(_text(entry, "pubDate"))
                     guid = _text(entry, "guid") or link
                 content = _strip_html(body)

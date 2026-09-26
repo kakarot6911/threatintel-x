@@ -99,22 +99,27 @@ class StixImporter:
         source_id: str,
         source_name: str,
         reliability: SourceReliability = SourceReliability.F,
+        credibility: InformationCredibility = InformationCredibility.CANNOT_BE_JUDGED,
+        source_type: SourceType = SourceType.STIX,
     ) -> None:
         self.repo = repo
         self.prov = Provenance(
             source_id=source_id,
             source_name=source_name,
-            source_type=SourceType.STIX,
+            source_type=source_type,
             collected_at=utcnow(),
             reliability=reliability,
-            credibility=InformationCredibility.CANNOT_BE_JUDGED,
+            credibility=credibility,
         )
 
     def import_bundle(self, bundle: dict[str, Any]) -> ImportResult:
         if bundle.get("type") != "bundle":
             raise ValueError("not a STIX bundle")
         result = ImportResult()
-        objects = bundle.get("objects", [])
+        # Revoked / deprecated objects are superseded knowledge: never import them as current.
+        objects = [
+            o for o in bundle.get("objects", []) if not o.get("revoked") and not o.get("x_mitre_deprecated")
+        ]
         for obj in objects:
             try:
                 stix2.parse(obj, allow_custom=True)

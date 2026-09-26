@@ -18,7 +18,11 @@ from threatintel.config import Settings, get_settings
 
 MAX_RESPONSE_BYTES = 20 * 1024 * 1024
 MAX_REDIRECTS = 3
-USER_AGENT = "THREATINTEL-X/0.1 (+defensive CTI research; contact: see repository)"
+# Names the real HTTP client: some CDN bot managers reject a custom agent whose TLS fingerprint is
+# httpx's, and we would rather be accurate than spoof a browser.
+USER_AGENT = (
+    f"THREATINTEL-X/0.1 python-httpx/{httpx.__version__} (+https://github.com/kakarot6911/threatintel-x)"
+)
 
 
 class NetworkDisabledError(RuntimeError):
